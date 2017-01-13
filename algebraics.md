@@ -72,3 +72,5 @@ It is trivial to solve:
 
 After getting $\dot\gamma$, we can go back to the velocity
 using $U=U_0 + \dot\gamma U_1$.
+
+## Viscous number controlled

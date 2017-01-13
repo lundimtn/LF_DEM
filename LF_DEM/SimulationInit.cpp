@@ -405,6 +405,11 @@ void Simulation::assertParameterCompatibility()
 		}
 		//p.integration_method = 0;
 	}
+	if (control_var == viscnb) {
+		if (sys.mobile_fixed) {
+			throw runtime_error("Cannot run viscous number controlled simulations with fixed particles.");
+		}
+	}
 	if (sys.critical_load) {
 		p.friction_model = 2;
 		cerr << "Warning : critical load simulation -> switched to friction_model=2" << endl;

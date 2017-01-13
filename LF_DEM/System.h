@@ -76,10 +76,15 @@ private:
 	vec3d omegahat_inf;  // omega/shear_rate: "shape" of the flow
 	Sym2Tensor E_infinity;
 	vec3d omega_inf;
+	std::vector <vec3d> u_inf;
+
+	double zexp_rate;
+	Sym2Tensor Ehat_infinity_zexp;
+	Sym2Tensor E_infinity_zexp;
+	std::vector <vec3d> u_inf_zexp;
 
 	double particle_volume;
 
-	std::vector <vec3d> u_inf;
 	std::vector <vec3d> na_disp;
 
 	/* data */
@@ -102,8 +107,11 @@ private:
 	void setRepulsiveForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setFixedParticleForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setDashpotForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
+	void setDashpotZexpForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setHydroForceToParticle_squeeze(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setHydroForceToParticle_squeeze_tangential(std::vector<vec3d> &force, std::vector<vec3d> &torque);
+	void setHydroZexpForceToParticle_squeeze(std::vector<vec3d> &force, std::vector<vec3d> &torque);
+	void setHydroZexpForceToParticle_squeeze_tangential(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void buildResistanceMatrix();
 	void setBrownianForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setSolverRHS(const ForceComponent &fc);
@@ -123,9 +131,10 @@ private:
 	void computeUInf();
 	void computeShearRate();
 	void computeShearRateWalls();
+	void computeZexpRate();
 	void computeForcesOnWallParticles();
 	void computeVelocityCoeffFixedParticles();
-	void rescaleVelHydroStressControlled();
+	void rescaleRateProportionalVelocities();
 	void addUpInteractionStressGU(std::vector<Sym2Tensor> &stress_comp,
 								  const std::vector<vec3d> &non_affine_vel,
 								  const std::vector<vec3d> &non_affine_ang_vel);
@@ -165,6 +174,7 @@ private:
 	void declareStressComponents();
 	void declareVelocityComponents();
 	void declareForceComponents();
+	void declareForceComponentsViscnbControlled();
 
 	template<typename T> void setupGenericConfiguration(T conf, ControlVariable control_);
 	void setupBrownian();
@@ -278,6 +288,7 @@ private:
 	double max_velocity;
 	double max_sliding_velocity;
 	double target_stress;
+	double target_Pz;
 	double init_strain_shear_rate_limit;
 	double init_shear_rate_limit;
 	/* Velocity difference between top and bottom
@@ -335,7 +346,7 @@ private:
 	vec3d periodized(const vec3d&);
 	void calcStress();
 	void calcStressPerParticle();
-	void calcContactXFPerParticleStressControlled();
+	void calcContactXFPerParticleRateDependencies();
 	void gatherVelocitiesByRateDependencies(std::vector<vec3d> &rateprop_vel,
 	                                        std::vector<vec3d> &rateprop_ang_vel,
 	                                        std::vector<vec3d> &rateindep_vel,
@@ -394,6 +405,7 @@ private:
 	}
 
 	void set_shear_rate(double sr);
+	void set_zexp_rate(double r);
 
 	vec3d get_vel_difference()
 	{
