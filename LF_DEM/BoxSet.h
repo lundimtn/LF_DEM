@@ -79,6 +79,7 @@ public:
 	 all particles in the box containing particle i and in the adjacent boxes.
 	 *****/
 	const std::vector <int>& neighborhood(int i);
+	void inflateZ(double inflation_ratio);
 	void printBoxNetwork();
 	void printBoxContainers();
 	void printNeighborhoodContainers();

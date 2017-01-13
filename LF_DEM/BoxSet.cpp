@@ -38,7 +38,7 @@ void BoxSet::init(double interaction_dist,
 
 		auto it = Boxes.insert(new Box());
 		Box* const b = (*it.first);
-		b->setPosition({0, 0, 0});
+		b->position = {0, 0, 0};
 		TopBottomBoxes.insert(b);
 		box_labels.push_back(b);
 	} else {
@@ -72,6 +72,20 @@ void BoxSet::init(double interaction_dist,
 	cout << " [ok]" << endl;
 }
 
+void BoxSet::inflateZ(double inflation_ratio)
+{
+	for (auto &pos: top_probing_positions) {
+		pos.z *= inflation_ratio;
+	}
+	for (auto &pos: bottom_probing_positions) {
+		pos.z *= inflation_ratio;
+	}
+	box_zsize *= inflation_ratio;
+	for (auto &bx: Boxes) {
+		bx->position.z *= inflation_ratio;
+	}
+}
+
 void BoxSet::allocateBoxes()
 {
 	for (unsigned int i=0; i<box_nb; i++) {
@@ -89,7 +103,7 @@ void BoxSet::positionBoxes()
 		for (unsigned int iy=0; iy<y_box_nb; iy++) {
 			for (unsigned int iz=0; iz<z_box_nb; iz++) {
 				Box* const bx = (*it);
-				bx->setPosition({box_xsize*(ix+0.5), box_ysize*(iy+0.5), box_zsize*(iz+0.5)}); // the center of the box
+				bx->position = {box_xsize*(ix+0.5), box_ysize*(iy+0.5), box_zsize*(iz+0.5)}; // the center of the box
 				int label = ix*y_box_nb*z_box_nb+iy*z_box_nb+iz;
 				box_labels[label] = bx;
 				if (iz == 0 && iz < z_box_nb-1) {// bottom box
@@ -114,7 +128,6 @@ void BoxSet::positionBoxes()
 void BoxSet::assignNeighborsBulk(const LeesEdwards &pbc)
 {
 	for (auto& bx : BulkBoxes) {
-		auto pos = bx->getPosition();
 		vec3d delta;
 		int m10p1[] = {-1, 0, 1};
 		for (const auto& a : m10p1) {
@@ -123,7 +136,7 @@ void BoxSet::assignNeighborsBulk(const LeesEdwards &pbc)
 				delta.y = b*box_ysize;
 				for (const auto& c : m10p1) {
 					delta.z = c*box_zsize;
-					bx->addStaticNeighbor(whichBox(pbc.periodized(pos+delta)));
+					bx->addStaticNeighbor(whichBox(pbc.periodized(bx->position+delta)));
 				}
 			}
 		}
@@ -133,7 +146,6 @@ void BoxSet::assignNeighborsBulk(const LeesEdwards &pbc)
 void BoxSet::assignNeighborsBottom(const LeesEdwards &pbc)
 {
 	for (auto& bx : BottomBoxes) {
-		auto pos = bx->getPosition();
 		vec3d delta;
 		// boxes  at same level and above first: these are fixed once and for all in the simulation
 		int m10p1[] = {-1, 0, 1};
@@ -144,12 +156,12 @@ void BoxSet::assignNeighborsBottom(const LeesEdwards &pbc)
 				delta.y = b*box_ysize;
 				for (const auto& c : p10) {
 					delta.z = c*box_zsize;
-					bx->addStaticNeighbor(whichBox(pbc.periodized(pos+delta)));
+					bx->addStaticNeighbor(whichBox(pbc.periodized(bx->position+delta)));
 				}
 			}
 		}
 		for (const auto& delta_prob : bottom_probing_positions) {
-			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(bx->position+delta_prob)));
 		}
 	}
 }
@@ -157,7 +169,6 @@ void BoxSet::assignNeighborsBottom(const LeesEdwards &pbc)
 void BoxSet::assignNeighborsTop(const LeesEdwards &pbc)
 {
 	for (auto& bx : TopBoxes) {
-		auto pos = bx->getPosition();
 		vec3d delta;
 		// boxes  at same level and bottom first: these are fixed once and for all in the simulation
 		int m10p1[] = {-1, 0, 1};
@@ -168,12 +179,12 @@ void BoxSet::assignNeighborsTop(const LeesEdwards &pbc)
 				delta.y = b*box_ysize;
 				for (const auto& c : m10) {
 					delta.z = c*box_zsize;
-					bx->addStaticNeighbor(whichBox(pbc.periodized(pos+delta)));
+					bx->addStaticNeighbor(whichBox(pbc.periodized(bx->position+delta)));
 				}
 			}
 		}
 		for (const auto& delta_prob : top_probing_positions) {
-			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(bx->position+delta_prob)));
 		}
 	}
 }
@@ -181,7 +192,6 @@ void BoxSet::assignNeighborsTop(const LeesEdwards &pbc)
 void BoxSet::assignNeighborsTopBottom(const LeesEdwards &pbc)
 {
 	for (auto& bx : TopBottomBoxes) {
-		auto pos = bx->getPosition();
 		vec3d delta;
 
 		// boxes at same level first: these are fixed once and for all in the simulation
@@ -191,15 +201,15 @@ void BoxSet::assignNeighborsTopBottom(const LeesEdwards &pbc)
 			for (const auto& b : m10p1) {
 				delta.y = b*box_ysize;
 				delta.z = 0;
-				bx->addStaticNeighbor(whichBox(pbc.periodized(pos+delta)));
+				bx->addStaticNeighbor(whichBox(pbc.periodized(bx->position+delta)));
 			}
 		}
 
 		for (const auto& delta_prob : top_probing_positions) {
-			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(bx->position+delta_prob)));
 		}
 		for (const auto& delta_prob : bottom_probing_positions) {
-			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(bx->position+delta_prob)));
 		}
 	}
 }
@@ -228,28 +238,25 @@ void BoxSet::updateNeighbors(const LeesEdwards &pbc)
 
 	for (auto& bx : TopBoxes) {
 		bx->resetMovingNeighbors();
-		auto pos = bx->getPosition();
 		for (const auto& delta_prob : top_probing_positions) {
-			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(bx->position+delta_prob)));
 		}
 	}
 
 	for (auto& bx : BottomBoxes) {
 		bx->resetMovingNeighbors();
-		auto pos = bx->getPosition();
 		for (const auto& delta_prob : bottom_probing_positions) {
-			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(bx->position+delta_prob)));
 		}
 	}
 
 	for (auto& bx : TopBottomBoxes) {
 		bx->resetMovingNeighbors();
-		auto pos = bx->getPosition();
 		for (const auto& delta_prob : top_probing_positions) {
-			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(bx->position+delta_prob)));
 		}
 		for (const auto& delta_prob : bottom_probing_positions) {
-			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(bx->position+delta_prob)));
 		}
 	}
 }
@@ -305,8 +312,8 @@ void BoxSet::printBoxNetwork()
 	for (const auto& bx : Boxes) {
 		const auto& neighbors = bx->getNeighborBox();
 		for (const auto& neighbor_box : neighbors) {
-			cerr << " "  << neighbors.size() << " " << bx->getPosition() << " ";
-			cerr << neighbor_box->getPosition() << endl;
+			cerr << " "  << neighbors.size() << " " << bx->position << " ";
+			cerr << neighbor_box->position << endl;
 		}
 	}
 }
@@ -315,7 +322,7 @@ void BoxSet::printBoxContainers()
 {
 	for (const auto& bx : Boxes) {
 		for (const auto& j : bx->getContainer()) {
-			cerr << bx->getPosition() << " " << j << endl;
+			cerr << bx->position << " " << j << endl;
 		}
 	}
 }
@@ -324,7 +331,7 @@ void BoxSet::printNeighborhoodContainers()
 {
 	for (const auto& bx : Boxes) {
 		for (const auto& j : bx->getNeighborhoodContainer()) {
-			cerr << bx->getPosition() << " " << j << endl;
+			cerr << bx->position << " " << j << endl;
 		}
 	}
 }
@@ -332,6 +339,6 @@ void BoxSet::printNeighborhoodContainers()
 void BoxSet::printBoxMap()
 {
 	for (unsigned int i=0; i<boxMap.size(); i++) {
-		cerr << i << " " << boxMap[i]->getPosition() << endl;
+		cerr << i << " " << boxMap[i]->position << endl;
 	}
 }

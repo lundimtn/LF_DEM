@@ -717,6 +717,12 @@ void System::timeStepBoxing()
 		}
 	}
 	boxset.update(pbc);
+	if (control==viscnb) {
+		boxset.inflateZ(1+zexp_rate*dt);
+		vec3d L = pbc.dimensions();
+		L.z *= zexp_rate;
+		pbc.set(L, pbc.shear_disp());		
+	}
 }
 
 void System::eventShearJamming()
