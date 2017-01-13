@@ -1,21 +1,22 @@
 #include <stdexcept>
 #include <sstream>
 #include "BoxSet.h"
-#include "System.h"
 using namespace std;
 
-void BoxSet::init(double interaction_dist, System* sys_)
+void BoxSet::init(double interaction_dist,
+                  LeesEdwards pbc,
+                  unsigned int np)
 {
 	string indent = "  BoxSet::\t";
 	cout << indent << "Setting up Cell List System ... ";
-	sys = sys_;
-	boxMap = new Box* [sys->get_np()];
-	for (int i=0; i<sys->get_np(); i++) {
-		boxMap[i] = NULL;
+	boxMap.resize(np);
+	for (auto &bx: boxMap) {
+		bx = NULL;
 	}
-	double xratio = sys->get_lx()/interaction_dist;
-	double yratio = sys->get_ly()/interaction_dist;
-	double zratio = sys->get_lz()/interaction_dist;
+	auto system_dimensions = pbc.dimensions();
+	double xratio = system_dimensions.x/interaction_dist;
+	double yratio = system_dimensions.y/interaction_dist;
+	double zratio = system_dimensions.z/interaction_dist;
 	x_box_nb = (unsigned int)xratio;
 	y_box_nb = (unsigned int)yratio;
 	z_box_nb = (unsigned int)zratio;
@@ -30,9 +31,9 @@ void BoxSet::init(double interaction_dist, System* sys_)
 	}
 	if (x_box_nb < 4 && y_box_nb < 4 && z_box_nb < 4) { // boxing useless: a neighborhood is the whole system
 		_is_boxed = false;
-		box_xsize = sys->get_lx();
-		box_ysize = sys->get_ly();
-		box_zsize = sys->get_lz();
+		box_xsize = system_dimensions.x;
+		box_ysize = system_dimensions.y;
+		box_zsize = system_dimensions.z;
 		box_nb = 1;
 
 		auto it = Boxes.insert(new Box());
@@ -42,9 +43,9 @@ void BoxSet::init(double interaction_dist, System* sys_)
 		box_labels.push_back(b);
 	} else {
 		_is_boxed = true;
-		box_xsize = sys->get_lx()/x_box_nb;
-		box_ysize = sys->get_ly()/y_box_nb;
-		box_zsize = sys->get_lz()/z_box_nb;
+		box_xsize = system_dimensions.x/x_box_nb;
+		box_ysize = system_dimensions.y/y_box_nb;
+		box_zsize = system_dimensions.z/z_box_nb;
 		int m1p1[] = {-1, 1};
 		for (int a : m1p1) {
 			for (int b : m1p1) {
@@ -66,7 +67,7 @@ void BoxSet::init(double interaction_dist, System* sys_)
 		// give them their position
 		positionBoxes();
 		// tell them their neighbors
-		assignNeighbors();
+		assignNeighbors(pbc);
 	}
 	cout << " [ok]" << endl;
 }
@@ -110,7 +111,7 @@ void BoxSet::positionBoxes()
 }
 
 
-void BoxSet::assignNeighborsBulk()
+void BoxSet::assignNeighborsBulk(const LeesEdwards &pbc)
 {
 	for (auto& bx : BulkBoxes) {
 		auto pos = bx->getPosition();
@@ -122,14 +123,14 @@ void BoxSet::assignNeighborsBulk()
 				delta.y = b*box_ysize;
 				for (const auto& c : m10p1) {
 					delta.z = c*box_zsize;
-					bx->addStaticNeighbor(whichBox(sys->periodized(pos+delta)));
+					bx->addStaticNeighbor(whichBox(pbc.periodized(pos+delta)));
 				}
 			}
 		}
 	}
 }
 
-void BoxSet::assignNeighborsBottom()
+void BoxSet::assignNeighborsBottom(const LeesEdwards &pbc)
 {
 	for (auto& bx : BottomBoxes) {
 		auto pos = bx->getPosition();
@@ -143,17 +144,17 @@ void BoxSet::assignNeighborsBottom()
 				delta.y = b*box_ysize;
 				for (const auto& c : p10) {
 					delta.z = c*box_zsize;
-					bx->addStaticNeighbor(whichBox(sys->periodized(pos+delta)));
+					bx->addStaticNeighbor(whichBox(pbc.periodized(pos+delta)));
 				}
 			}
 		}
 		for (const auto& delta_prob : bottom_probing_positions) {
-			bx->addMovingNeighbor(whichBox(sys->periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
 		}
 	}
 }
 
-void BoxSet::assignNeighborsTop()
+void BoxSet::assignNeighborsTop(const LeesEdwards &pbc)
 {
 	for (auto& bx : TopBoxes) {
 		auto pos = bx->getPosition();
@@ -167,17 +168,17 @@ void BoxSet::assignNeighborsTop()
 				delta.y = b*box_ysize;
 				for (const auto& c : m10) {
 					delta.z = c*box_zsize;
-					bx->addStaticNeighbor(whichBox(sys->periodized(pos+delta)));
+					bx->addStaticNeighbor(whichBox(pbc.periodized(pos+delta)));
 				}
 			}
 		}
 		for (const auto& delta_prob : top_probing_positions) {
-			bx->addMovingNeighbor(whichBox(sys->periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
 		}
 	}
 }
 
-void BoxSet::assignNeighborsTopBottom()
+void BoxSet::assignNeighborsTopBottom(const LeesEdwards &pbc)
 {
 	for (auto& bx : TopBottomBoxes) {
 		auto pos = bx->getPosition();
@@ -190,40 +191,25 @@ void BoxSet::assignNeighborsTopBottom()
 			for (const auto& b : m10p1) {
 				delta.y = b*box_ysize;
 				delta.z = 0;
-				bx->addStaticNeighbor(whichBox(sys->periodized(pos+delta)));
+				bx->addStaticNeighbor(whichBox(pbc.periodized(pos+delta)));
 			}
 		}
 
 		for (const auto& delta_prob : top_probing_positions) {
-			bx->addMovingNeighbor(whichBox(sys->periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
 		}
 		for (const auto& delta_prob : bottom_probing_positions) {
-			bx->addMovingNeighbor(whichBox(sys->periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
 		}
 	}
 }
 
-void BoxSet::assignNeighbors()
+void BoxSet::assignNeighbors(const LeesEdwards &pbc)
 {
-	// bulk boxes
-	assignNeighborsBulk();
-	// bottom boxes
-	assignNeighborsBottom();
-	// top boxes
-	assignNeighborsTop();
-	// top/bottom boxes
-	assignNeighborsTopBottom();
-}
-
-BoxSet::~BoxSet()
-{
-	Boxes.clear();
-	BulkBoxes.clear();
-	TopBoxes.clear();
-	BottomBoxes.clear();
-	TopBottomBoxes.clear();
-	box_labels.clear();
-	DELETE(boxMap);
+	assignNeighborsBulk(pbc);
+	assignNeighborsBottom(pbc);
+	assignNeighborsTop(pbc);
+	assignNeighborsTopBottom(pbc);
 }
 
 /*****
@@ -232,7 +218,7 @@ BoxSet::~BoxSet()
  At each time step, we need to check if neighborhood on top and bottom boxes have changed.
  Bulk boxes do not need to be updated.
  *****/
-void BoxSet::updateNeighbors()
+void BoxSet::updateNeighbors(const LeesEdwards &pbc)
 {
 	/**
 	 \brief Update the neighbors of top and bottom boxes have changed.
@@ -244,7 +230,7 @@ void BoxSet::updateNeighbors()
 		bx->resetMovingNeighbors();
 		auto pos = bx->getPosition();
 		for (const auto& delta_prob : top_probing_positions) {
-			bx->addMovingNeighbor(whichBox(sys->periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
 		}
 	}
 
@@ -252,7 +238,7 @@ void BoxSet::updateNeighbors()
 		bx->resetMovingNeighbors();
 		auto pos = bx->getPosition();
 		for (const auto& delta_prob : bottom_probing_positions) {
-			bx->addMovingNeighbor(whichBox(sys->periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
 		}
 	}
 
@@ -260,35 +246,30 @@ void BoxSet::updateNeighbors()
 		bx->resetMovingNeighbors();
 		auto pos = bx->getPosition();
 		for (const auto& delta_prob : top_probing_positions) {
-			bx->addMovingNeighbor(whichBox(sys->periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
 		}
 		for (const auto& delta_prob : bottom_probing_positions) {
-			bx->addMovingNeighbor(whichBox(sys->periodized(pos+delta_prob)));
+			bx->addMovingNeighbor(whichBox(pbc.periodized(pos+delta_prob)));
 		}
 	}
 }
 
 //public methods
-void BoxSet::update()
+void BoxSet::update(const LeesEdwards &pbc)
 {
-	if (is_boxed()) {
-		updateNeighbors();
+	if (_is_boxed) {
+		updateNeighbors(pbc);
 	}
 	for (const auto& bx : Boxes) {
 		bx->buildNeighborhoodContainer();
 	}
 }
 
-bool BoxSet::is_boxed()
-{
-	return _is_boxed;
-}
-
 Box* BoxSet::whichBox(const vec3d &pos)
 {
 	unsigned int ix = (unsigned int)(pos.x/box_xsize);
 	unsigned int iy;
-	if (sys->twodimension) {
+	if (box_ysize > 0) {
 		iy = 0;
 	} else {
 		iy = (unsigned int)(pos.y/box_ysize);
@@ -303,9 +284,9 @@ Box* BoxSet::whichBox(const vec3d &pos)
 	return box_labels[label];
 }
 
-void BoxSet::box(int i)
+void BoxSet::box(int i, const vec3d &pos)
 {
-	Box* b = whichBox(sys->position[i]);
+	Box* b = whichBox(pos);
 	if (b != boxMap[i]) {
 		b->add(i);
 		if (boxMap[i] != NULL) {
@@ -350,7 +331,7 @@ void BoxSet::printNeighborhoodContainers()
 
 void BoxSet::printBoxMap()
 {
-	for (int i=0; i<sys->get_np(); i++) {
+	for (unsigned int i=0; i<boxMap.size(); i++) {
 		cerr << i << " " << boxMap[i]->getPosition() << endl;
 	}
 }

@@ -37,6 +37,7 @@
 #include "StressComponent.h"
 #include "VelocityComponent.h"
 #include "ForceComponent.h"
+#include "LeesEdwards.h"
 #include "cholmod.h"
 #ifndef USE_DSFMT
 #include "MersenneTwister.h"
@@ -62,12 +63,7 @@ private:
 	int total_num_timesteps;
 	double time_; ///< time elapsed since beginning of the time evolution.
 	double time_in_simulation_units; ///< time elapsed since beginning of the time evolution. \b note: this is measured in Simulation (output) units, not in internal System units.
-	double lx;
-	double ly;
-	double lz;
-	double lx_half; // =lx/2
-	double ly_half; // =ly/2
-	double lz_half; // =lz/2
+	LeesEdwards pbc;
 	vec3d shear_strain;
 	double cumulated_strain;
 	double angle_wheel; // rotational angle of rotary couette geometory
@@ -129,6 +125,7 @@ private:
 	void adjustVelocityPeriodicBoundary();
 	void rushWorkFor2DBrownian(std::vector<vec3d> &vel, std::vector<vec3d> &ang_vel); // We need to implement real 2D simulation.
 	void computeUInf();
+	void computeUInfZexp();
 	void computeShearRate();
 	void computeShearRateWalls();
 	void computeZexpRate();
@@ -284,7 +281,6 @@ private:
 	int avg_dt_nb;
 	double system_volume;
 
-	vec3d shear_disp; // lees-edwards shift between top and bottom. only shear_disp.x, shear_disp.y is used
 	double max_velocity;
 	double max_sliding_velocity;
 	double target_stress;
@@ -341,9 +337,7 @@ private:
 	void declareResistance(int p0, int p1);
 	void eraseResistance(int p0, int p1);
 	void updateInteractions();
-	int periodize(vec3d&);
-	int periodizeDiff(vec3d&);
-	vec3d periodized(const vec3d&);
+	const LeesEdwards &getPeriodicBC() {return pbc;};
 	void calcStress();
 	void calcStressPerParticle();
 	void calcContactXFPerParticleRateDependencies();
@@ -363,31 +357,6 @@ private:
 	double calcLubricationRange(int, int);
 	void (System::*eventLookUp)();
 	void eventShearJamming();
-
-	void setBoxSize(double lx_, double ly_, double lz_)
-	{
-		lx = lx_;
-		lx_half = 0.5*lx;
-		ly = ly_;
-		ly_half = 0.5*ly;
-		lz = lz_;
-		lz_half = 0.5*lz;
-	}
-
-	double get_lx()
-	{
-		return lx;
-	}
-
-	double get_ly()
-	{
-		return ly;
-	}
-
-	double get_lz()
-	{
-		return lz;
-	}
 
 	double get_time_in_simulation_units()
 	{

@@ -41,10 +41,6 @@ public:
 
 	vec3d getPosition() const {return position;}
 	void setPosition(vec3d pos) {position = pos;}
-	// void is_top(bool it) {_is_top = it;};
-	// void is_bottom(bool ib) {_is_bottom = ib;};
-	// bool is_top() const {return _is_top;};
-	// bool is_bottom() const {return _is_bottom;};
 
 	void add(int);
 	void remove(int);

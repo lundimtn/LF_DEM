@@ -697,7 +697,7 @@ void Simulation::outputData()
 void Simulation::getSnapshotHeader(stringstream& snapshot_header)
 {
 	snapshot_header << "# " << sys.get_cumulated_strain() << ' ';
-	snapshot_header << sys.shear_disp.x << ' ';
+	snapshot_header << sys.getPeriodicBC().shear_disp().x << ' ';
 	snapshot_header << getRate() << ' ';
 	snapshot_header << target_stress_input << ' ';
 	snapshot_header << sys.get_time() << ' ';
@@ -706,18 +706,20 @@ void Simulation::getSnapshotHeader(stringstream& snapshot_header)
 
 vec3d Simulation::shiftUpCoordinate(double x, double y, double z)
 {
+	auto shear_disp = sys.getPeriodicBC().shear_disp();
+	auto L = sys.getPeriodicBC().dimensions();
 	if (p.origin_zero_flow) {
-		z += 0.5*sys.get_lz();
-		if (z > 0.5*sys.get_lz()) {
-			x -= sys.shear_disp.x;
-			y -= sys.shear_disp.y;
-			if (x < -0.5*sys.get_lx()) {
-				x += sys.get_lx();
+		z += 0.5*L.z;
+		if (z > 0.5*L.z) {
+			x -= shear_disp.x;
+			y -= shear_disp.y;
+			if (x < -0.5*L.x) {
+				x += L.x;
 			}
-			if (y < -0.5*sys.get_ly()) {
-				y += sys.get_ly();
+			if (y < -0.5*L.y) {
+				y += L.y;
 			}
-			z -= sys.get_lz();
+			z -= L.z;
 		}
 	}
 	return vec3d(x,y,z);
@@ -754,10 +756,11 @@ void Simulation::outputParFileTxt()
 
 	vector<vec3d> pos(np);
 	vector<vec3d> vel(np);
+	auto L = sys.getPeriodicBC().dimensions();
 	for (int i=0; i<np; i++) {
-		pos[i] = shiftUpCoordinate(sys.position[i].x-0.5*sys.get_lx(),
-		                           sys.position[i].y-0.5*sys.get_ly(),
-		                           sys.position[i].z-0.5*sys.get_lz());
+		pos[i] = shiftUpCoordinate(sys.position[i].x-0.5*L.x,
+		                           sys.position[i].y-0.5*L.y,
+		                           sys.position[i].z-0.5*L.z);
 	}
 	/* If the origin is shifted,
 	 * we need to change the velocities of particles as well.

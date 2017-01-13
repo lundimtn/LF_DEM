@@ -78,7 +78,6 @@ mobile_fixed(false),
 couette_stress(false),
 dt(0),
 avg_dt(0),
-shear_disp(0),
 target_stress(0),
 init_strain_shear_rate_limit(0),
 init_shear_rate_limit(999),
@@ -88,9 +87,6 @@ ratio_unit_time(NULL),
 eventLookUp(NULL)
 {
 	max_sliding_velocity = 0;
-	lx = 0;
-	ly = 0;
-	lz = 0;
 	time_ = 0;
 	time_in_simulation_units = 0;
 	shear_strain = 0;
@@ -285,7 +281,6 @@ void System::setInteractions_GenerateInitConfig()
 	calcInteractionRange = &System::calcLubricationRange;
 
 	shear_strain = {0, 0, 0};
-	shear_disp.reset();
 	vel_difference.reset();
 	initializeBoxing();
 	checkNewInteraction();
@@ -542,15 +537,12 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 		angle_output = true;
 	}
 	cout << indent << "Setting up System... [ok]" << endl;
-
-	shear_disp = conf.lees_edwards_disp;
+ 	pbc.set({conf.lx,conf.ly,conf.lz}, conf.lees_edwards_disp);
 	if (p.keep_input_strain) {
-		shear_strain = shear_disp/lz;
+		shear_strain = conf.lees_edwards_disp/conf.lz;
 	} else {
 		shear_strain = {0, 0, 0};
 	}
-
-	setBoxSize(conf.lx,conf.ly,conf.lz);
 	setConfiguration(conf.position, conf.radius);
 	setContacts(conf.contact_states);
 	setupSystemPostConfiguration();
@@ -612,7 +604,8 @@ void System::setupSystemPostConfiguration()
 	omega_wheel_in  = 0;
 	omega_wheel_out = 0;
 	if (p.simulation_mode >= 10 && p.simulation_mode <= 20) {
-		origin_of_rotation = {lx_half, 0, lz_half};
+		vec3d L = pbc.dimensions();
+		origin_of_rotation = {L.x/2, 0, L.z/2};
 		for (int i=np_mobile; i<np; i++) {
 			angle[i] = -atan2(position[i].z-origin_of_rotation.z,
 							  position[i].x-origin_of_rotation.x);
@@ -665,19 +658,20 @@ void System::initializeBoxing()
 			}
 		}
 	}
-	boxset.init(max_range, this);
+	boxset.init(max_range, pbc, np);
 	for (int i=0; i<np; i++) {
-		boxset.box(i);
+		boxset.box(i, position[i]);
 	}
-	boxset.update();
+	boxset.update(pbc);
 }
 
 struct base_configuration System::getConfiguration()
 {
 	struct base_configuration c;
-	c.lx = lx;
-	c.ly = ly;
-	c.lz = lz;
+	vec3d L = pbc.dimensions();
+	c.lx = L.x;
+	c.ly = L.y;
+	c.lz = L.z;
 	c.volume_or_area_fraction = particle_volume/system_volume;
 
 	c.position = position;
@@ -685,7 +679,7 @@ struct base_configuration System::getConfiguration()
 	if (twodimension) {
 		c.angle = angle;
 	}
-	c.lees_edwards_disp = shear_disp;
+	c.lees_edwards_disp = pbc.shear_disp();
 	c.contact_states = getContacts();
 	return c;
 }
@@ -700,17 +694,20 @@ void System::timeStepBoxing()
 		vec3d strain_increment = 2*dot(E_infinity, {0, 0, 1})*dt;
 		cumulated_strain += strain_increment.norm();
 		shear_strain += strain_increment;
-		shear_disp += strain_increment*lz;
-		int m = (int)(shear_disp.x/lx);
+		auto shear_disp = pbc.shear_disp();
+		vec3d L = pbc.dimensions();
+		shear_disp += strain_increment*L.z;
+		int m = (int)(shear_disp.x/L.x);
 		if (shear_disp.x < 0) {
 			m--;
 		}
-		shear_disp.x = shear_disp.x-m*lx;
-		m = (int)(shear_disp.y/ly);
+		shear_disp.x = shear_disp.x-m*L.x;
+		m = (int)(shear_disp.y/L.y);
 		if (shear_disp.y < 0) {
 			m--;
 		}
-		shear_disp.y = shear_disp.y-m*ly;
+		shear_disp.y = shear_disp.y-m*L.y;
+		pbc.set(pbc.dimensions(), shear_disp);
 	} else {
 		if (wall_rheology || p.simulation_mode == 31) {
 			vec3d strain_increment = 2*dot(E_infinity, {0, 0, 1})*dt;
@@ -719,7 +716,7 @@ void System::timeStepBoxing()
 			angle_wheel += dt*(omega_wheel_in-omega_wheel_out);
 		}
 	}
-	boxset.update();
+	boxset.update(pbc);
 }
 
 void System::eventShearJamming()
@@ -1251,7 +1248,7 @@ void System::checkNewInteraction()
 			if (j > i) {
 				if (!hasNeighbor(i, j)) {
 					pos_diff = position[j]-position[i];
-					periodizeDiff(pos_diff);
+					pbc.periodizeDiff(pos_diff);
 					sq_dist = pos_diff.sq_norm();
 					double scaled_interaction_range = (this->*calcInteractionRange)(i, j);
 					double sq_dist_lim = scaled_interaction_range*scaled_interaction_range;
@@ -1850,9 +1847,10 @@ void System::computeVelocityByComponents()
 
 void System::setVelocityDifference()
 {
-	vel_difference = 2*dot(E_infinity, {0, 0, lz});
+	vec3d L = pbc.dimensions();
+	vel_difference = 2*dot(E_infinity, {0, 0, L.z});
 	if (control==viscnb) {
-		vel_difference += dot(E_infinity_zexp, {0, 0, lz});
+		vel_difference += dot(E_infinity_zexp, {0, 0, L.z});
 	}
 }
 
@@ -1962,10 +1960,11 @@ void System::computeShearRateWalls()
 		total_rate_indep_wall_shear_stress += dot(fixed_velocities[i], non_rate_proportional_wall_force[i]);
 	}
 	double wall_surface;
+	vec3d L = pbc.dimensions();
 	if (twodimension) {
-		wall_surface = lx;
+		wall_surface = L.x;
 	} else {
-		wall_surface = lx*ly;
+		wall_surface = L.x*L.y;
 	}
 
 	total_rate_dep_wall_shear_stress /= wall_surface;
@@ -2097,11 +2096,12 @@ void System::tmpMixedProblemSetVelocities()
 			na_ang_velocity[i].reset();
 		}
 	} else if (p.simulation_mode == 51) {
+		vec3d L = pbc.dimensions();
 		int i_np_in = np_mobile+np_wall1;
 		// inner wheel
-		double l = lx/2;
-		vec3d origin_of_rotation2(lx/2, 0, l);
-		vec3d origin_of_rotation3(  lx, 0, 0);
+		double l = L.x/2;
+		vec3d origin_of_rotation2(L.x/2, 0, l);
+		vec3d origin_of_rotation3(  L.x, 0, 0);
 		double x1 = l/sqrt(2);
 		double x2 = x1+radius_in*sqrt(2);
 		for (int i=i_np_in; i<np; i++) {
@@ -2206,6 +2206,7 @@ void System::computeVelocities(bool velocity_components)
 		sumUpVelocityComponents();
 	} else if (control==viscnb) {
 		set_zexp_rate(1);
+		computeUInf();
 		computeUInfZexp();
 		// setFixedParticleVelocities(); ## don't viscnb + fixed particles for now
 		computeVelocityByComponents();
@@ -2221,7 +2222,7 @@ void System::computeVelocities(bool velocity_components)
 		computeMaxNAVelocity();
 	}
 	adjustVelocityPeriodicBoundary();
-	if (divided_velocities && wall_rheology) {
+	if (velocity_components && wall_rheology) {
 		if (in_predictor) {
 			forceResultantLubricationForce();
 		}
@@ -2330,7 +2331,7 @@ void System::rushWorkFor2DBrownian(vector<vec3d> &vel, vector<vec3d> &ang_vel)
 void System::displacement(int i, const vec3d& dr)
 {
 	position[i] += dr;
-	int z_shift = periodize(position[i]);
+	int z_shift = pbc.periodize(position[i]);
 	/* Note:
 	 * When the position of the particle is periodized,
 	 * we need to modify the velocity, which was already evaluated.
@@ -2339,98 +2340,27 @@ void System::displacement(int i, const vec3d& dr)
 	if (z_shift != 0) {
 		velocity[i] += z_shift*vel_difference;
 	}
-	boxset.box(i);
+	boxset.box(i, position[i]);
 }
 
-// [0,l]
-int System::periodize(vec3d& pos)
-{
-	/* Lees-Edwards boundary condition
-	 *
-	 */
-	int z_shift = 0;
-	if (pos.z >= lz) {
-		pos.z -= lz;
-		pos -= shear_disp;
-		z_shift = -1;
-	} else if (pos.z < 0) {
-		pos.z += lz;
-		pos += shear_disp;
-		z_shift = 1;
-	}
-	while (pos.x >= lx) {
-		pos.x -= lx;
-	}
-	while (pos.x < 0) {
-		pos.x += lx;
-	}
-	if (!twodimension) {
-		if (pos.y >= ly) {
-			pos.y -= ly;
-		} else if (pos.y < 0) {
-			pos.y += ly;
-		}
-	}
-	return z_shift;
-}
-
-// [0,l]
-vec3d System::periodized(const vec3d &pos)
-{
-	vec3d periodized_pos = pos;
-	periodize(periodized_pos);
-	return periodized_pos;
-}
-
-int System::periodizeDiff(vec3d& pos_diff)
-{
-	/** Periodize a separation vector with Lees-Edwards boundary condition
-
-		On return pos_diff is the separation vector corresponding to the closest copies,
-		and velocity_offset contains the velocity difference produced by Lees-Edwards between the 2 points.
-	 */
-	int zshift = 0;
-	if (pos_diff.z > lz_half) {
-		pos_diff.z -= lz;
-		pos_diff -= shear_disp;
-		zshift = -1;
-	} else if (pos_diff.z < -lz_half) {
-		pos_diff.z += lz;
-		pos_diff += shear_disp;
-		zshift = 1;
-	}
-	while (pos_diff.x > lx_half) {
-		pos_diff.x -= lx;
-	}
-	while (pos_diff.x < -lx_half) {
-		pos_diff.x += lx;
-	}
-	if (!twodimension) {
-		if (pos_diff.y > ly_half) {
-			pos_diff.y -= ly;
-		} else if (pos_diff.y < -ly_half) {
-			pos_diff.y += ly;
-		}
-	}
-	return zshift;
-}
 
 void System::setSystemVolume()
 {
+	vec3d L = pbc.dimensions();
 	string indent = "  System::\t";
 	if (z_top == -1) {
-		system_height = lz;
+		system_height = L.z;
 	} else {
 		/* wall particles are at z = z_bot - a and z_top + a
 		 */
 		system_height = z_top-z_bot;
 	}
 	if (twodimension) {
-		system_volume = lx*system_height;
-		cout << indent << "lx = " << lx << " lz = " << lz << " system_height = " << system_height << endl;
+		system_volume = L.x*system_height;
+		cout << indent << "lx = " << L.x << " lz = " << L.z << " system_height = " << system_height << endl;
 	} else {
-		system_volume = lx*ly*system_height;
-		cout << indent << "lx = " << lx << " lz = " << lz << " ly = " << ly << endl;
+		system_volume = L.x*L.y*system_height;
+		cout << indent << "lx = " << L.x << " lz = " << L.z << " ly = " << L.y << endl;
 	}
 }
 

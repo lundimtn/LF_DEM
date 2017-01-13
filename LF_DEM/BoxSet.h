@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <vector>
 #include "vec3d.h"
+#include "LeesEdwards.h"
 #include "Box.h"
 
 #define DELETE(x) if(x){delete [] x; x = NULL;}
@@ -39,28 +40,24 @@ private:
 	std::set <Box*> BottomBoxes;
 	std::set <Box*> TopBottomBoxes;
 	std::vector <Box*> box_labels;
-	System* sys;
-	/*****
-	 WhichBox(vec3d pos)
-	 returns a pointer on the box containg position pos
-	 *****/
 	Box* whichBox(const vec3d&);
-	void updateNeighbors();
+	void updateNeighbors(const LeesEdwards &);
 	// init methods
 	void allocateBoxes();
 	void positionBoxes();
-	void assignNeighbors();
-	void assignNeighborsBulk();
-	void assignNeighborsTop();
-	void assignNeighborsBottom();
-	void assignNeighborsTopBottom();
-	Box** boxMap;
+	void assignNeighbors(const LeesEdwards &);
+	void assignNeighborsBulk(const LeesEdwards &);
+	void assignNeighborsTop(const LeesEdwards &);
+	void assignNeighborsBottom(const LeesEdwards &);
+	void assignNeighborsTopBottom(const LeesEdwards &);
+	std::vector<Box*> boxMap;
 	std::vector<vec3d> top_probing_positions;
 	std::vector<vec3d> bottom_probing_positions;
 public:
-	BoxSet(){;}
-	~BoxSet();
-	void init(double interaction_dist, System *sys_);
+	void init(double interaction_dist,
+	          LeesEdwards pbc,
+	          unsigned int np);
+	// void init(double interaction_dist, System *sys_);
 	/*****
 	 update()
 
@@ -68,28 +65,14 @@ public:
 	 It updates the neighborhood relations betwenn boxes.
 	 Those relations change at each time step for boxes on top or bottom
 	 *****/
-	void update();
-	/*****
-	 is_boxed()
-
-	 Can be called before calling an other method of BoxSet.
-	 If false, than calls to other method may usually be avoided.
-	 They can be performed anyway though, and they are normally safe (and useless)
-
-	 is_boxed() tells if the boxing is effective.
-	 If the system size is small, the neighborhood of a box may contain
-	 the whole system. If this happens, the boxing consists of only one box (as it
-	 is useless, if not ill defined, to do something else), and is_boxed() returns false.
-
-	 *****/
-	bool is_boxed();
+	void update(const LeesEdwards &);
 
 	/*****
 	 box(int i)
 	 boxes particles i
 	 should be called after moving particle i
 	 *****/
-	void box(int i);
+	void box(int i, const vec3d &pos);
 	/*****
 	 neighborhood_begin(int i) and neighborhood_end(int i)
 	 gives iterators to beginning and ending point of the container including

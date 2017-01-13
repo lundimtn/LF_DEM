@@ -384,11 +384,12 @@ void System::calcStress()
 	}
 
     if (wall_rheology) {
+			vec3d L = pbc.dimensions();
         if (z_top != -1) {
-            shearstress_wall1 = force_tang_wall1/lx;
-            shearstress_wall2 = force_tang_wall2/lx;
-            normalstress_wall1 = force_normal_wall1/lx;
-            normalstress_wall2 = force_normal_wall2/lx;
+            shearstress_wall1 = force_tang_wall1/L.x;
+            shearstress_wall2 = force_tang_wall2/L.x;
+            normalstress_wall1 = force_normal_wall1/L.x;
+            normalstress_wall2 = force_normal_wall2/L.x;
         } else {
             double wall_area_in = M_PI*2*(radius_in-radius_wall_particle);
             double wall_area_out = M_PI*2*(radius_out+radius_wall_particle);
