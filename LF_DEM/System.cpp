@@ -137,9 +137,17 @@ void System::allocateRessources()
 		velocity_predictor.resize(np);
 		ang_velocity_predictor.resize(np);
 	}
-	u_inf.resize(np);
-	for (auto &v: u_inf) {
-		v.reset();
+	if (!zero_shear) {
+		u_inf.resize(np);
+		for (auto &v: u_inf) {
+			v.reset();
+		}
+	}
+	if (control==viscnb) {
+		u_inf_zexp.resize(np);
+		for (auto &v: u_inf_zexp) {
+			v.reset();
+		}
 	}
 	na_disp.resize(np);
 	if (mobile_fixed) {
@@ -513,6 +521,9 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 	np_mobile = np - p.np_fixed;
 	twodimension = conf.ly == 0;
 	control = control_;
+
+	cerr << endl << endl << " !!!!!!! " << endl << "HARD CODED CONTROL=VISCNB" << endl << endl;
+	control = viscnb;
 
 	setupParameters();
 	// Memory
@@ -1903,7 +1914,7 @@ void System::computeZexpRate()
 	/**
 	 \brief Compute the shear rate under stress control conditions.
 	 */
-	assert(abs(shear_rate-1) < 1e-15);
+	assert(abs(zexp_rate-1) < 1e-15);
 	calcStressPerParticle();
 	Sym2Tensor rate_prop_stress;
 	Sym2Tensor rate_indep_stress;
@@ -2156,22 +2167,26 @@ void System::rescaleRateProportionalVelocities()
 	}
 }
 
-void System::computeVelocities(bool divided_velocities)
+void System::computeVelocities(bool velocity_components)
 {
 	/**
 	 \brief Compute velocities in the current configuration.
 
-	 \param divided_velocities Divide the velocities in components
+	 \param velocity_components Divide the velocities in components
 	 (hydro, contacts, Brownian, ...). (Note that in Brownian
 	 simulations the Brownian component is always computed explicitely, independently of the values of divided_velocities.)
 	 */
 	stokes_solver.resetRHS();
 	resetForceComponents();
 
+	target_Pz = -2;
+	setImposedFlow({0, 0, 0.5, 0, 0, 0},
+	               {0, 0.5, 0});
+
 	if (control==rate) {
 		computeUInf();
 		setFixedParticleVelocities();
-		if (divided_velocities) {
+		if (velocity_components) {
 			computeVelocityByComponents();
 			sumUpVelocityComponents();
 		} else {
@@ -2191,7 +2206,7 @@ void System::computeVelocities(bool divided_velocities)
 		sumUpVelocityComponents();
 	} else if (control==viscnb) {
 		set_zexp_rate(1);
-		computeUInf();
+		computeUInfZexp();
 		// setFixedParticleVelocities(); ## don't viscnb + fixed particles for now
 		computeVelocityByComponents();
 		computeZexpRate();
@@ -2248,11 +2263,16 @@ void System::computeVelocitiesStokesDrag()
 	adjustVelocityPeriodicBoundary();
 }
 
+void System::computeUInfZexp()
+{
+	assert(control==viscnb);
+	for (int i=0; i<np; i++) {
+		u_inf_zexp[i] = dot(E_infinity_zexp, position[i]);
+	}
+}
+
 void System::computeUInf()
 {
-	for (int i=0; i<np; i++) {
-		u_inf[i].reset();
-	}
 	if (!zero_shear) {
 		for (int i=0; i<np; i++) {
 			u_inf[i] = dot(E_infinity, position[i]) + cross(omega_inf, position[i]);
@@ -2262,7 +2282,7 @@ void System::computeUInf()
 
 void System::adjustVelocityPeriodicBoundary()
 {
-	if (control==stress) { // in rate control it is already done in computeVelocities()
+	if (control!=rate) { // in rate control it is already done in computeVelocities()
 		computeUInf();
 	}
 	for (int i=0; i<np; i++) {
@@ -2273,6 +2293,12 @@ void System::adjustVelocityPeriodicBoundary()
 		for (int i=0; i<np; i++) {
 			velocity[i] += u_inf[i];
 			ang_velocity[i] += omega_inf;
+		}
+	}
+	if (control==viscnb) {
+		computeUInfZexp();
+		for (int i=0; i<np; i++) {
+			velocity[i] += u_inf_zexp[i];
 		}
 	}
 }
