@@ -48,13 +48,19 @@ void System::declareStressComponents() {
 
 	/****************  ME stress ********************/
 	if (lubrication) {
-		stress_components["M_E_hydro"] = StressComponent(STRAIN_STRESS, np, RATE_PROPORTIONAL, "hydro");
+		if (control==stress || control==rate) {
+			stress_components["M_E_hydro"] = StressComponent(STRAIN_STRESS, np, RATE_PROPORTIONAL, "hydro");
+		}
+		if (control==viscnb) {
+			stress_components["M_Eshear_hydro"] = StressComponent(STRAIN_STRESS, np, RATE_INDEPENDENT, "hydro");
+			stress_components["M_Ezexp_hydro"] = StressComponent(STRAIN_STRESS, np, RATE_PROPORTIONAL, "hydro");
+		}
 	}
 
 	/****************  xF stresses *****************/
 	if (control==rate) {
 		stress_components["xF_contact"] = StressComponent(XF_STRESS, np, RATE_DEPENDENT, "contact"); // rate dependent through xFdashpot
-	} else { // stress controlled
+	} else { // stress controlled or viscnb controlled
 		stress_components["xF_contact_rateprop"] = StressComponent(XF_STRESS, np, RATE_PROPORTIONAL, "contact");
 		stress_components["xF_contact_rateindep"] = StressComponent(XF_STRESS, np, RATE_INDEPENDENT, "contact");
 	}
@@ -62,12 +68,12 @@ void System::declareStressComponents() {
 		stress_components["xF_repulsion"] = StressComponent(XF_STRESS, np, RATE_INDEPENDENT, "repulsion");
 	}
 
-	if (control==stress) {
+	if (control==stress || control==viscnb) {
 		for (const auto &sc: stress_components) {
 			if (sc.second.rate_dependence == RATE_DEPENDENT) {
 				ostringstream error_msg;
 				error_msg << "Cannot run stress controlled simulation with stress component " << sc.first;
-				error_msg << " as it is neither independent nor proportional to the shear rate.";
+				error_msg << " as it is neither independent of nor proportional to the shear rate.";
 				throw runtime_error(error_msg.str());
 			}
 		}

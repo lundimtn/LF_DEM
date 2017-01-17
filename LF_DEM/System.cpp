@@ -152,8 +152,13 @@ void System::allocateRessources()
 		rate_proportional_wall_force.resize(p.np_fixed);
 		rate_proportional_wall_torque.resize(p.np_fixed);
 	}
-	declareForceComponents();
+	if (control==rate || control==stress) {
+		declareForceComponents();
+	} else {
+		declareForceComponentsViscnbControlled();
+	}
 	declareVelocityComponents();
+
 	interaction_list.resize(np);
 	interaction_partners.resize(np);
 	nb_blocks_ff.resize(p.np_fixed, 0);
@@ -518,6 +523,7 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 	control = control_;
 
 	cerr << endl << endl << " !!!!!!! " << endl << "HARD CODED CONTROL=VISCNB" << endl << endl;
+	set_shear_rate(1);
 	control = viscnb;
 
 	setupParameters();
@@ -718,10 +724,12 @@ void System::timeStepBoxing()
 	}
 	boxset.update(pbc);
 	if (control==viscnb) {
-		boxset.inflateZ(1+zexp_rate*dt);
+		double inflate_ratio = 1+zexp_rate*dt;
+		boxset.inflateZ(inflate_ratio);
 		vec3d L = pbc.dimensions();
-		L.z *= zexp_rate;
-		pbc.set(L, pbc.shear_disp());		
+		L.z *= inflate_ratio;
+		// cerr << L.z << endl;
+		pbc.set(L, pbc.shear_disp());
 	}
 }
 
