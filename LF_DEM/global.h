@@ -7,21 +7,6 @@
 #include <vector>
 #include "vec3d.h"
 
-#define RATE_INDEPENDENT 0
-#define RATE_DEPENDENT 1
-#define RATE_PROPORTIONAL 2
-#define VELOCITY_STRESS 0
-#define STRAIN_STRESS 1
-#define XF_STRESS 2
-#define BROWNIAN_STRESS 3
-
-#define BIN_FORMAT_BASE_OLD 1
-#define BIN_FORMAT_BASE_NEW 2
-#define BIN_FORMAT_FIXED_VEL 3
-#define TXT_FORMAT_BASE_OLD 1
-#define TXT_FORMAT_BASE_NEW 2
-#define TXT_FORMAT_FIXED_VEL 3
-#define TXT_FORMAT_CIRCULAR_COUETTE 4
 
 #define CALL_MEMBER_FN(object,ptrToMember)  ((object).*(ptrToMember))
 
@@ -155,5 +140,12 @@ enum ControlVariable {
 	stress,
 	viscnb
 };
+
+enum RateDependence {
+	rate_independent,
+	rate_dependent,
+	rate_proportional
+};
+
 
 #endif /* defined(__LF_DEM__global__) */

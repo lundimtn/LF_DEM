@@ -2,23 +2,24 @@
 #define __LF_DEM__VelocityComponent__
 #include <vector>
 #include "vec3d.h"
+#include "global.h"
 
 struct VelocityComponent
 {
-	unsigned int rate_dependence;
+	RateDependence rate_dependence;
 	std::vector<vec3d> vel;
 	std::vector<vec3d> ang_vel;
-	
+
 	VelocityComponent(){};
 	VelocityComponent(std::size_t size,
-					  unsigned int _rate_dependence):
+	                  RateDependence _rate_dependence):
 	rate_dependence(_rate_dependence)
 	{
 		vel.resize(size);
 		ang_vel.resize(size);
 		reset();
 	}
-	
+
 	void reset()
 	{
 		for(auto &v: vel) {
@@ -28,7 +29,7 @@ struct VelocityComponent
 			av.reset();
 		}
 	}
-	
+
 	struct VelocityComponent&	operator*=(double d)
 	{
 		for(auto &v: vel) {

@@ -30,7 +30,7 @@ void System::declareStressComponents() {
 	if (lubrication) {
 		for (const auto &vc: na_velo_components) {
 			if (vc.first != "brownian") {
-				stress_components[vc.first] = StressComponent(VELOCITY_STRESS,
+				stress_components[vc.first] = StressComponent(velocity_stress,
 				                                                vc.second.vel.size(),
 			                                                  vc.second.rate_dependence,
 			                                                  vc.first);
@@ -40,37 +40,37 @@ void System::declareStressComponents() {
 
 	// Brownian
 	if (brownian) { // Brownian is different than other GU, needs predictor data too
-		stress_components["brownian"] = StressComponent(BROWNIAN_STRESS,
-		                                                np, RATE_DEPENDENT, "brownian");// rate dependent for now
-		stress_components["brownian_predictor"] = StressComponent(BROWNIAN_STRESS,
-		                                                          np, RATE_DEPENDENT, "brownian");// rate dependent for now
+		stress_components["brownian"] = StressComponent(brownian_stress,
+		                                                np, rate_dependent, "brownian");// rate dependent for now
+		stress_components["brownian_predictor"] = StressComponent(brownian_stress,
+		                                                          np, rate_dependent, "brownian");// rate dependent for now
 	}
 
 	/****************  ME stress ********************/
 	if (lubrication) {
 		if (control==stress || control==rate) {
-			stress_components["M_E_hydro"] = StressComponent(STRAIN_STRESS, np, RATE_PROPORTIONAL, "hydro");
+			stress_components["M_E_hydro"] = StressComponent(strain_stress, np, rate_proportional, "hydro");
 		}
 		if (control==viscnb) {
-			stress_components["M_Eshear_hydro"] = StressComponent(STRAIN_STRESS, np, RATE_INDEPENDENT, "hydro");
-			stress_components["M_Ezexp_hydro"] = StressComponent(STRAIN_STRESS, np, RATE_PROPORTIONAL, "hydro");
+			stress_components["M_Eshear_hydro"] = StressComponent(strain_stress, np, rate_independent, "hydro");
+			stress_components["M_Ezexp_hydro"] = StressComponent(strain_stress, np, rate_proportional, "hydro");
 		}
 	}
 
 	/****************  xF stresses *****************/
 	if (control==rate) {
-		stress_components["xF_contact"] = StressComponent(XF_STRESS, np, RATE_DEPENDENT, "contact"); // rate dependent through xFdashpot
+		stress_components["xF_contact"] = StressComponent(xf_stress, np, rate_dependent, "contact"); // rate dependent through xFdashpot
 	} else { // stress controlled or viscnb controlled
-		stress_components["xF_contact_rateprop"] = StressComponent(XF_STRESS, np, RATE_PROPORTIONAL, "contact");
-		stress_components["xF_contact_rateindep"] = StressComponent(XF_STRESS, np, RATE_INDEPENDENT, "contact");
+		stress_components["xF_contact_rateprop"] = StressComponent(xf_stress, np, rate_proportional, "contact");
+		stress_components["xF_contact_rateindep"] = StressComponent(xf_stress, np, rate_independent, "contact");
 	}
 	if (repulsiveforce) {
-		stress_components["xF_repulsion"] = StressComponent(XF_STRESS, np, RATE_INDEPENDENT, "repulsion");
+		stress_components["xF_repulsion"] = StressComponent(xf_stress, np, rate_independent, "repulsion");
 	}
 
 	if (control==stress || control==viscnb) {
 		for (const auto &sc: stress_components) {
-			if (sc.second.rate_dependence == RATE_DEPENDENT) {
+			if (sc.second.rate_dependence == rate_dependent) {
 				ostringstream error_msg;
 				error_msg << "Cannot run stress controlled simulation with stress component " << sc.first;
 				error_msg << " as it is neither independent of nor proportional to the shear rate.";
@@ -137,13 +137,13 @@ void System::gatherVelocitiesByRateDependencies(vector<vec3d> &rateprop_vel,
 		rateindep_ang_vel[i].reset();
 	}
 	for (const auto &vc: na_velo_components) {
-		if (vc.second.rate_dependence == RATE_PROPORTIONAL) {
+		if (vc.second.rate_dependence == rate_proportional) {
 			for (unsigned int i=0; i<rateprop_vel.size(); i++) {
 				rateprop_vel[i] += vc.second.vel[i];
 				rateprop_ang_vel[i] += vc.second.ang_vel[i];
 			}
 		}
-		if (vc.second.rate_dependence == RATE_INDEPENDENT) {
+		if (vc.second.rate_dependence == rate_independent) {
 			for (unsigned int i=0; i<rateprop_vel.size(); i++) {
 				rateindep_vel[i] += vc.second.vel[i];
 				rateindep_ang_vel[i] += vc.second.ang_vel[i];
@@ -257,12 +257,12 @@ void System::calcStressPerParticle()
 	for(auto &sc: stress_components) {
 		auto type = sc.second.type;
 		const auto &component_name = sc.first;
-		if (type == VELOCITY_STRESS) {
+		if (type == velocity_stress) {
 			addUpInteractionStressGU(sc.second.particle_stress,
 			                         na_velo_components[component_name].vel,
 			                         na_velo_components[component_name].ang_vel);
 		}
-		if (type == STRAIN_STRESS) {
+		if (type == strain_stress) {
 			addUpInteractionStressME(sc.second.particle_stress);
 		}
 	}
@@ -346,10 +346,10 @@ void System::gatherStressesByRateDependencies(Sym2Tensor &rate_prop_stress,
 	rate_prop_stress.reset();
 	rate_indep_stress.reset();
 	for (const auto &sc: stress_components) {
-		if (sc.second.rate_dependence == RATE_INDEPENDENT) {
+		if (sc.second.rate_dependence == rate_independent) {
 			rate_indep_stress += sc.second.getTotalStress();
 		}
-		if (sc.second.rate_dependence == RATE_PROPORTIONAL) {
+		if (sc.second.rate_dependence == rate_proportional) {
 			rate_prop_stress += sc.second.getTotalStress();
 		}
 	}
