@@ -14,13 +14,14 @@
 #include "SystemHelperFunctions.h"
 #include "global.h"
 
-#ifndef USE_DSFMT
-#define GRANDOM ( r_gen->randNorm(0., 1.) ) // RNG gaussian with mean 0. and variance 1.
-#endif
-#ifdef USE_DSFMT
-#define GRANDOM  ( sqrt( -2.0 * log( 1.0 - dsfmt_genrand_open_open(&r_gen) ) ) * cos(2.0 * 3.14159265358979323846264338328 * dsfmt_genrand_close_open(&r_gen) ) ) // RNG gaussian with mean 0. and variance 1.
-#endif
 using namespace std;
+
+#ifndef USE_DSFMT
+double
+normRand(MTRand *r_gen) {// RNG gaussian with mean 0. and variance 1.
+	return r_gen->randNorm(0., 1.);
+}
+#endif
 
 #ifdef USE_DSFMT
 inline unsigned long
@@ -51,6 +52,12 @@ wagnerhash(time_t t, clock_t c)
 		h2 += pp[j];
 	}
 	return (h1 + differ++)^h2;
+}
+
+double
+normRand(dsfmt_t *r_gen) {// RNG gaussian with mean 0. and variance 1.
+	return sqrt(-2.0*log(1.0 - dsfmt_genrand_open_open(r_gen)))
+					 *cos(6.2831853071795864*dsfmt_genrand_close_open(r_gen));
 }
 #endif
 
@@ -721,7 +728,7 @@ void System::timeStepBoxing()
 		boxset.inflateZ(1+zexp_rate*dt);
 		vec3d L = pbc.dimensions();
 		L.z *= zexp_rate;
-		pbc.set(L, pbc.shear_disp());		
+		pbc.set(L, pbc.shear_disp());
 	}
 }
 
@@ -1582,12 +1589,12 @@ void System::setBrownianForceToParticle(vector<vec3d> &force,
 	}
 	double sqrt_2_dt_amp = sqrt(2*p.brownian/dt);
 	for (unsigned int i=0; i<force.size(); i++) {
-		force[i].x = sqrt_2_dt_amp*GRANDOM; // \sqrt(2kT/dt) * random vector A (force and torque)
-		force[i].y = sqrt_2_dt_amp*GRANDOM;
-		force[i].z = sqrt_2_dt_amp*GRANDOM;
-		torque[i].x = sqrt_2_dt_amp*GRANDOM; // \sqrt(2kT/dt) * random vector A (force and torque)
-		torque[i].y = sqrt_2_dt_amp*GRANDOM;
-		torque[i].z = sqrt_2_dt_amp*GRANDOM;
+		force[i].x = sqrt_2_dt_amp*normRand(r_gen); // \sqrt(2kT/dt) * random vector A (force and torque)
+		force[i].y = sqrt_2_dt_amp*normRand(r_gen);
+		force[i].z = sqrt_2_dt_amp*normRand(r_gen);
+		torque[i].x = sqrt_2_dt_amp*normRand(r_gen); // \sqrt(2kT/dt) * random vector A (force and torque)
+		torque[i].y = sqrt_2_dt_amp*normRand(r_gen);
+		torque[i].z = sqrt_2_dt_amp*normRand(r_gen);
 	}
 
 	if (pairwise_resistance) {
