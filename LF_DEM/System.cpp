@@ -59,6 +59,8 @@ System::System(ParameterSet& ps, list <Event>& ev):
 pairwise_resistance_changed(true),
 shear_rate(0),
 omega_inf(0),
+zexp_rate(0),
+Ehat_infinity_zexp(0),
 events(ev),
 p(ps),
 brownian(false),
@@ -76,7 +78,6 @@ mobile_fixed(false),
 couette_stress(false),
 dt(0),
 avg_dt(0),
-shear_disp(0),
 target_stress(0),
 init_strain_shear_rate_limit(0),
 init_shear_rate_limit(999),
@@ -86,9 +87,6 @@ ratio_unit_time(NULL),
 eventLookUp(NULL)
 {
 	max_sliding_velocity = 0;
-	lx = 0;
-	ly = 0;
-	lz = 0;
 	time_ = 0;
 	time_in_simulation_units = 0;
 	shear_strain = 0;
@@ -135,9 +133,17 @@ void System::allocateRessources()
 		velocity_predictor.resize(np);
 		ang_velocity_predictor.resize(np);
 	}
-	u_inf.resize(np);
-	for (auto &v: u_inf) {
-		v.reset();
+	if (!zero_shear) {
+		u_inf.resize(np);
+		for (auto &v: u_inf) {
+			v.reset();
+		}
+	}
+	if (control==viscnb) {
+		u_inf_zexp.resize(np);
+		for (auto &v: u_inf_zexp) {
+			v.reset();
+		}
 	}
 	na_disp.resize(np);
 	if (mobile_fixed) {
@@ -204,6 +210,53 @@ void System::declareForceComponents()
 
 	/********** Force R_FU^{mf}*(U^f-U^f_inf)  *************/
 	if (mobile_fixed) {
+		// TO DO!
+	}
+}
+
+void System::declareForceComponentsViscnbControlled()
+{
+	// Only declare in force components the forces on the rhs of
+	// R_FU*(U-U_inf) = RHS
+	// These forces will be used to compute the na_velo_components,
+	// a set of components that must add up exactly to the total non-affine velocity
+
+	bool torque = true;
+
+	/******* Contact force, spring part ***********/
+	if (friction) {
+		force_components["contact"] = ForceComponent(np, RATE_INDEPENDENT, torque, &System::setContactForceToParticle);
+	} else {
+		force_components["contact"] = ForceComponent(np, RATE_INDEPENDENT, !torque, &System::setContactForceToParticle);
+	}
+
+	/******* Contact force, dashpot part ***********/
+	// note that we keep the torque on even without friction,
+	// as there is nothing else to prevent tangential motion when in contact
+	// (apart from Stokes drag, which can be set arbitrarily small)
+	force_components["dashpot_shear"] = ForceComponent(np, RATE_INDEPENDENT, torque, &System::setDashpotForceToParticle);
+	force_components["dashpot_zexp"] = ForceComponent(np, RATE_PROPORTIONAL, torque, &System::setDashpotZexpForceToParticle);
+
+	/*********** Hydro force, i.e.  R_FE:E_inf *****************/
+	if (!zero_shear) {
+		if (p.lubrication_model == "normal") {
+			force_components["hydro_shear"] = ForceComponent(np, RATE_INDEPENDENT, !torque, &System::setHydroForceToParticle_squeeze);
+			force_components["hydro_zexp"] = ForceComponent(np, RATE_PROPORTIONAL, !torque, &System::setHydroZexpForceToParticle_squeeze);
+		}
+		if (p.lubrication_model == "tangential") {
+			force_components["hydro_shear"] = ForceComponent(np, RATE_INDEPENDENT, torque, &System::setHydroForceToParticle_squeeze_tangential);
+			force_components["hydro_zexp"] = ForceComponent(np, RATE_PROPORTIONAL, torque, &System::setHydroZexpForceToParticle_squeeze_tangential);
+		}
+	}
+	if (repulsiveforce) {
+		force_components["repulsion"] = ForceComponent(np, RATE_INDEPENDENT, !torque, &System::setRepulsiveForceToParticle);
+	}
+	if (brownian) {
+		force_components["brownian"] = ForceComponent(np, RATE_DEPENDENT, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
+	}
+
+	/********** Force R_FU^{mf}*(U^f-U^f_inf)  *************/
+	if (mobile_fixed) {
 		// rate proportional with walls, but this can change
 		if (p.lubrication_model != "normal") {
 			force_components["from_fixed"] = ForceComponent(np, RATE_PROPORTIONAL, !torque, &System::setFixedParticleForceToParticle);
@@ -228,7 +281,6 @@ void System::setInteractions_GenerateInitConfig()
 	calcInteractionRange = &System::calcLubricationRange;
 
 	shear_strain = {0, 0, 0};
-	shear_disp.reset();
 	vel_difference.reset();
 	initializeBoxing();
 	checkNewInteraction();
@@ -465,6 +517,9 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 	twodimension = conf.ly == 0;
 	control = control_;
 
+	cerr << endl << endl << " !!!!!!! " << endl << "HARD CODED CONTROL=VISCNB" << endl << endl;
+	control = viscnb;
+
 	setupParameters();
 	// Memory
 	allocateRessources();
@@ -482,15 +537,12 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 		angle_output = true;
 	}
 	cout << indent << "Setting up System... [ok]" << endl;
-
-	shear_disp = conf.lees_edwards_disp;
+ 	pbc.set({conf.lx,conf.ly,conf.lz}, conf.lees_edwards_disp);
 	if (p.keep_input_strain) {
-		shear_strain = shear_disp/lz;
+		shear_strain = conf.lees_edwards_disp/conf.lz;
 	} else {
 		shear_strain = {0, 0, 0};
 	}
-
-	setBoxSize(conf.lx,conf.ly,conf.lz);
 	setConfiguration(conf.position, conf.radius);
 	setContacts(conf.contact_states);
 	setupSystemPostConfiguration();
@@ -552,7 +604,8 @@ void System::setupSystemPostConfiguration()
 	omega_wheel_in  = 0;
 	omega_wheel_out = 0;
 	if (p.simulation_mode >= 10 && p.simulation_mode <= 20) {
-		origin_of_rotation = {lx_half, 0, lz_half};
+		vec3d L = pbc.dimensions();
+		origin_of_rotation = {L.x/2, 0, L.z/2};
 		for (int i=np_mobile; i<np; i++) {
 			angle[i] = -atan2(position[i].z-origin_of_rotation.z,
 							  position[i].x-origin_of_rotation.x);
@@ -605,19 +658,20 @@ void System::initializeBoxing()
 			}
 		}
 	}
-	boxset.init(max_range, this);
+	boxset.init(max_range, pbc, np);
 	for (int i=0; i<np; i++) {
-		boxset.box(i);
+		boxset.box(i, position[i]);
 	}
-	boxset.update();
+	boxset.update(pbc);
 }
 
 struct base_configuration System::getConfiguration()
 {
 	struct base_configuration c;
-	c.lx = lx;
-	c.ly = ly;
-	c.lz = lz;
+	vec3d L = pbc.dimensions();
+	c.lx = L.x;
+	c.ly = L.y;
+	c.lz = L.z;
 	c.volume_or_area_fraction = particle_volume/system_volume;
 
 	c.position = position;
@@ -625,7 +679,7 @@ struct base_configuration System::getConfiguration()
 	if (twodimension) {
 		c.angle = angle;
 	}
-	c.lees_edwards_disp = shear_disp;
+	c.lees_edwards_disp = pbc.shear_disp();
 	c.contact_states = getContacts();
 	return c;
 }
@@ -640,17 +694,20 @@ void System::timeStepBoxing()
 		vec3d strain_increment = 2*dot(E_infinity, {0, 0, 1})*dt;
 		cumulated_strain += strain_increment.norm();
 		shear_strain += strain_increment;
-		shear_disp += strain_increment*lz;
-		int m = (int)(shear_disp.x/lx);
+		auto shear_disp = pbc.shear_disp();
+		vec3d L = pbc.dimensions();
+		shear_disp += strain_increment*L.z;
+		int m = (int)(shear_disp.x/L.x);
 		if (shear_disp.x < 0) {
 			m--;
 		}
-		shear_disp.x = shear_disp.x-m*lx;
-		m = (int)(shear_disp.y/ly);
+		shear_disp.x = shear_disp.x-m*L.x;
+		m = (int)(shear_disp.y/L.y);
 		if (shear_disp.y < 0) {
 			m--;
 		}
-		shear_disp.y = shear_disp.y-m*ly;
+		shear_disp.y = shear_disp.y-m*L.y;
+		pbc.set(pbc.dimensions(), shear_disp);
 	} else {
 		if (wall_rheology || p.simulation_mode == 31) {
 			vec3d strain_increment = 2*dot(E_infinity, {0, 0, 1})*dt;
@@ -659,7 +716,13 @@ void System::timeStepBoxing()
 			angle_wheel += dt*(omega_wheel_in-omega_wheel_out);
 		}
 	}
-	boxset.update();
+	boxset.update(pbc);
+	if (control==viscnb) {
+		boxset.inflateZ(1+zexp_rate*dt);
+		vec3d L = pbc.dimensions();
+		L.z *= zexp_rate;
+		pbc.set(L, pbc.shear_disp());		
+	}
 }
 
 void System::eventShearJamming()
@@ -1191,7 +1254,7 @@ void System::checkNewInteraction()
 			if (j > i) {
 				if (!hasNeighbor(i, j)) {
 					pos_diff = position[j]-position[i];
-					periodizeDiff(pos_diff);
+					pbc.periodizeDiff(pos_diff);
 					sq_dist = pos_diff.sq_norm();
 					double scaled_interaction_range = (this->*calcInteractionRange)(i, j);
 					double sq_dist_lim = scaled_interaction_range*scaled_interaction_range;
@@ -1552,7 +1615,7 @@ void System::setBrownianForceToParticle(vector<vec3d> &force,
 }
 
 void System::setDashpotForceToParticle(vector<vec3d> &force,
-									   vector<vec3d> &torque)
+                                       vector<vec3d> &torque)
 {
 	vec3d GEi, GEj, HEi, HEj;
 	unsigned int i, j;
@@ -1568,8 +1631,26 @@ void System::setDashpotForceToParticle(vector<vec3d> &force,
 	}
 }
 
+void System::setDashpotZexpForceToParticle(vector<vec3d> &force,
+                                           vector<vec3d> &torque)
+{
+	vec3d GEi, GEj, HEi, HEj;
+	unsigned int i, j;
+	vec3d zero = {0, 0, 0};
+	for (const auto &inter: interaction) {
+		if (inter.contact.is_active() && inter.contact.dashpot.is_active()) {
+			std::tie(i, j) = inter.get_par_num();
+			std::tie(GEi, GEj, HEi, HEj) = inter.contact.dashpot.getRFU_Uinf(u_inf_zexp[i], u_inf_zexp[j], zero);
+			force[i] += GEi;
+			force[j] += GEj;
+			torque[i] += HEi;
+			torque[j] += HEj;
+		}
+	}
+}
+
 void System::setHydroForceToParticle_squeeze(vector<vec3d> &force,
-											 vector<vec3d> &torque)
+                                             vector<vec3d> &torque)
 {
 	vec3d GEi, GEj;
 	unsigned int i, j;
@@ -1583,8 +1664,23 @@ void System::setHydroForceToParticle_squeeze(vector<vec3d> &force,
 	}
 }
 
+void System::setHydroZexpForceToParticle_squeeze(vector<vec3d> &force,
+                                                 vector<vec3d> &torque)
+{
+	vec3d GEi, GEj;
+	unsigned int i, j;
+	for (const auto &inter: interaction) {
+		if (inter.lubrication.is_active()) {
+			std::tie(i, j) = inter.get_par_num();
+			std::tie(GEi, GEj) = inter.lubrication.calcGE_squeeze(E_infinity_zexp); // G*E_\infty term
+			force[i] += GEi;
+			force[j] += GEj;
+		}
+	}
+}
+
 void System::setHydroForceToParticle_squeeze_tangential(vector<vec3d> &force,
-														vector<vec3d> &torque)
+                                                        vector<vec3d> &torque)
 {
 	vec3d GEi, GEj, HEi, HEj;
 	unsigned int i, j;
@@ -1592,6 +1688,23 @@ void System::setHydroForceToParticle_squeeze_tangential(vector<vec3d> &force,
 		if (inter.lubrication.is_active()) {
 			std::tie(i, j) = inter.get_par_num();
 			std::tie(GEi, GEj, HEi, HEj) = inter.lubrication.calcGEHE_squeeze_tangential(E_infinity); // G*E_\infty term, no gamma dot
+			force[i] += GEi;
+			force[j] += GEj;
+			torque[i] += HEi;
+			torque[j] += HEj;
+		}
+	}
+}
+
+void System::setHydroZexpForceToParticle_squeeze_tangential(vector<vec3d> &force,
+                                                            vector<vec3d> &torque)
+{
+	vec3d GEi, GEj, HEi, HEj;
+	unsigned int i, j;
+	for (const auto &inter: interaction) {
+		if (inter.lubrication.is_active()) {
+			std::tie(i, j) = inter.get_par_num();
+			std::tie(GEi, GEj, HEi, HEj) = inter.lubrication.calcGEHE_squeeze_tangential(E_infinity_zexp); // G*E_\infty term, no gamma dot
 			force[i] += GEi;
 			force[j] += GEj;
 			torque[i] += HEi;
@@ -1740,7 +1853,11 @@ void System::computeVelocityByComponents()
 
 void System::setVelocityDifference()
 {
-	vel_difference = 2*dot(E_infinity, {0, 0, lz});
+	vec3d L = pbc.dimensions();
+	vel_difference = 2*dot(E_infinity, {0, 0, L.z});
+	if (control==viscnb) {
+		vel_difference += dot(E_infinity_zexp, {0, 0, L.z});
+	}
 }
 
 void System::set_shear_rate(double sr)
@@ -1751,10 +1868,18 @@ void System::set_shear_rate(double sr)
 	setVelocityDifference();
 }
 
+void System::set_zexp_rate(double r)
+{
+	zexp_rate = r;
+	E_infinity_zexp = Ehat_infinity_zexp*zexp_rate;
+	setVelocityDifference();
+}
+
 void System::setImposedFlow(Sym2Tensor EhatInfty, vec3d OhatInfty)
 {
 	Ehat_infinity = EhatInfty;
 	omegahat_inf = OhatInfty;
+
 	if(twodimension) {
 		if (fabs(Ehat_infinity.elm[3])>1e-15 || fabs(Ehat_infinity.elm[4])>1e-15) {
 			throw runtime_error(" System:: Error: 2d simulation with Einf_{y?} != 0");
@@ -1771,8 +1896,14 @@ void System::setImposedFlow(Sym2Tensor EhatInfty, vec3d OhatInfty)
 	}
 	omega_inf = omegahat_inf*shear_rate;
 	E_infinity = Ehat_infinity*shear_rate;
+
+	if (control==viscnb) {
+		Ehat_infinity_zexp = {0, 0, 0, 0, 0, 1};
+		E_infinity_zexp = Ehat_infinity_zexp*zexp_rate;
+	}
 	setVelocityDifference();
 }
+
 
 void System::setShearDirection(double theta_shear) // will probably be deprecated soon
 {
@@ -1780,6 +1911,22 @@ void System::setShearDirection(double theta_shear) // will probably be deprecate
 	double sintheta_shear = sin(theta_shear);
 	setImposedFlow({0, 0, costheta_shear/2, sintheta_shear/2, 0, 0},
 	               {-0.5*sintheta_shear, 0.5*costheta_shear, 0});
+}
+
+void System::computeZexpRate()
+{
+	/**
+	 \brief Compute the shear rate under stress control conditions.
+	 */
+	assert(abs(zexp_rate-1) < 1e-15);
+	calcStressPerParticle();
+	Sym2Tensor rate_prop_stress;
+	Sym2Tensor rate_indep_stress;
+	gatherStressesByRateDependencies(rate_prop_stress, rate_indep_stress);
+	double newtonian_viscosity = doubledot(rate_prop_stress, E_infinity_zexp); // computed with rate=1, o here it is also the viscosity.
+	double newtonian_stress = target_Pz - doubledot(rate_indep_stress, E_infinity_zexp);
+
+	set_zexp_rate(newtonian_stress/newtonian_viscosity);
 }
 
 void System::computeShearRate()
@@ -1819,10 +1966,11 @@ void System::computeShearRateWalls()
 		total_rate_indep_wall_shear_stress += dot(fixed_velocities[i], non_rate_proportional_wall_force[i]);
 	}
 	double wall_surface;
+	vec3d L = pbc.dimensions();
 	if (twodimension) {
-		wall_surface = lx;
+		wall_surface = L.x;
 	} else {
-		wall_surface = lx*ly;
+		wall_surface = L.x*L.y;
 	}
 
 	total_rate_dep_wall_shear_stress /= wall_surface;
@@ -1954,11 +2102,12 @@ void System::tmpMixedProblemSetVelocities()
 			na_ang_velocity[i].reset();
 		}
 	} else if (p.simulation_mode == 51) {
+		vec3d L = pbc.dimensions();
 		int i_np_in = np_mobile+np_wall1;
 		// inner wheel
-		double l = lx/2;
-		vec3d origin_of_rotation2(lx/2, 0, l);
-		vec3d origin_of_rotation3(  lx, 0, 0);
+		double l = L.x/2;
+		vec3d origin_of_rotation2(L.x/2, 0, l);
+		vec3d origin_of_rotation3(  L.x, 0, 0);
 		double x1 = l/sqrt(2);
 		double x2 = x1+radius_in*sqrt(2);
 		for (int i=i_np_in; i<np; i++) {
@@ -2010,47 +2159,66 @@ void System::setFixedParticleVelocities()
 	}
 }
 
-void System::rescaleVelHydroStressControlled()
+void System::rescaleRateProportionalVelocities()
 {
 	for (auto &vc: na_velo_components) {
 		if (vc.second.rate_dependence == RATE_PROPORTIONAL) {
-			vc.second *= shear_rate;
+			if (control==stress) {
+				vc.second *= shear_rate;
+			}
+			if (control==viscnb) {
+				vc.second *= zexp_rate;
+			}
 		}
 	}
 }
 
-void System::computeVelocities(bool divided_velocities)
+void System::computeVelocities(bool velocity_components)
 {
 	/**
 	 \brief Compute velocities in the current configuration.
 
-	 \param divided_velocities Divide the velocities in components
+	 \param velocity_components Divide the velocities in components
 	 (hydro, contacts, Brownian, ...). (Note that in Brownian
 	 simulations the Brownian component is always computed explicitely, independently of the values of divided_velocities.)
 	 */
 	stokes_solver.resetRHS();
 	resetForceComponents();
-	if (divided_velocities || control==stress) {
-		if (control==stress) {
-			set_shear_rate(1);
+
+	target_Pz = -2;
+	setImposedFlow({0, 0, 0.5, 0, 0, 0},
+	               {0, 0.5, 0});
+
+	if (control==rate) {
+		computeUInf();
+		setFixedParticleVelocities();
+		if (velocity_components) {
+			computeVelocityByComponents();
+			sumUpVelocityComponents();
+		} else {
+			computeVelocityWithoutComponents();
 		}
+	} else if (control==stress) {
+		set_shear_rate(1);
 		computeUInf();
 		setFixedParticleVelocities();
 		computeVelocityByComponents();
-		if (control==stress) {
-			if (p.simulation_mode != 31) {
-				computeShearRate();
-			} else {
-				computeShearRateWalls();
-			}
-			rescaleVelHydroStressControlled();
+		if (p.simulation_mode != 31) {
+			computeShearRate();
+		} else {
+			computeShearRateWalls();
 		}
+		rescaleRateProportionalVelocities();
 		sumUpVelocityComponents();
-		// checkForceBalance();
-	} else {
+	} else if (control==viscnb) {
+		set_zexp_rate(1);
 		computeUInf();
-		setFixedParticleVelocities();
-		computeVelocityWithoutComponents();
+		computeUInfZexp();
+		// setFixedParticleVelocities(); ## don't viscnb + fixed particles for now
+		computeVelocityByComponents();
+		computeZexpRate();
+		rescaleRateProportionalVelocities();
+		sumUpVelocityComponents();
 	}
 	/*
 	 * The max velocity is used to find dt from max displacement
@@ -2060,7 +2228,7 @@ void System::computeVelocities(bool divided_velocities)
 		computeMaxNAVelocity();
 	}
 	adjustVelocityPeriodicBoundary();
-	if (divided_velocities && wall_rheology) {
+	if (velocity_components && wall_rheology) {
 		if (in_predictor) {
 			forceResultantLubricationForce();
 		}
@@ -2102,11 +2270,16 @@ void System::computeVelocitiesStokesDrag()
 	adjustVelocityPeriodicBoundary();
 }
 
+void System::computeUInfZexp()
+{
+	assert(control==viscnb);
+	for (int i=0; i<np; i++) {
+		u_inf_zexp[i] = dot(E_infinity_zexp, position[i]);
+	}
+}
+
 void System::computeUInf()
 {
-	for (int i=0; i<np; i++) {
-		u_inf[i].reset();
-	}
 	if (!zero_shear) {
 		for (int i=0; i<np; i++) {
 			u_inf[i] = dot(E_infinity, position[i]) + cross(omega_inf, position[i]);
@@ -2116,7 +2289,7 @@ void System::computeUInf()
 
 void System::adjustVelocityPeriodicBoundary()
 {
-	if (control==stress) { // in rate control it is already done in computeVelocities()
+	if (control!=rate) { // in rate control it is already done in computeVelocities()
 		computeUInf();
 	}
 	for (int i=0; i<np; i++) {
@@ -2127,6 +2300,12 @@ void System::adjustVelocityPeriodicBoundary()
 		for (int i=0; i<np; i++) {
 			velocity[i] += u_inf[i];
 			ang_velocity[i] += omega_inf;
+		}
+	}
+	if (control==viscnb) {
+		computeUInfZexp();
+		for (int i=0; i<np; i++) {
+			velocity[i] += u_inf_zexp[i];
 		}
 	}
 }
@@ -2158,7 +2337,7 @@ void System::rushWorkFor2DBrownian(vector<vec3d> &vel, vector<vec3d> &ang_vel)
 void System::displacement(int i, const vec3d& dr)
 {
 	position[i] += dr;
-	int z_shift = periodize(position[i]);
+	int z_shift = pbc.periodize(position[i]);
 	/* Note:
 	 * When the position of the particle is periodized,
 	 * we need to modify the velocity, which was already evaluated.
@@ -2167,98 +2346,27 @@ void System::displacement(int i, const vec3d& dr)
 	if (z_shift != 0) {
 		velocity[i] += z_shift*vel_difference;
 	}
-	boxset.box(i);
+	boxset.box(i, position[i]);
 }
 
-// [0,l]
-int System::periodize(vec3d& pos)
-{
-	/* Lees-Edwards boundary condition
-	 *
-	 */
-	int z_shift = 0;
-	if (pos.z >= lz) {
-		pos.z -= lz;
-		pos -= shear_disp;
-		z_shift = -1;
-	} else if (pos.z < 0) {
-		pos.z += lz;
-		pos += shear_disp;
-		z_shift = 1;
-	}
-	while (pos.x >= lx) {
-		pos.x -= lx;
-	}
-	while (pos.x < 0) {
-		pos.x += lx;
-	}
-	if (!twodimension) {
-		if (pos.y >= ly) {
-			pos.y -= ly;
-		} else if (pos.y < 0) {
-			pos.y += ly;
-		}
-	}
-	return z_shift;
-}
-
-// [0,l]
-vec3d System::periodized(const vec3d &pos)
-{
-	vec3d periodized_pos = pos;
-	periodize(periodized_pos);
-	return periodized_pos;
-}
-
-int System::periodizeDiff(vec3d& pos_diff)
-{
-	/** Periodize a separation vector with Lees-Edwards boundary condition
-
-		On return pos_diff is the separation vector corresponding to the closest copies,
-		and velocity_offset contains the velocity difference produced by Lees-Edwards between the 2 points.
-	 */
-	int zshift = 0;
-	if (pos_diff.z > lz_half) {
-		pos_diff.z -= lz;
-		pos_diff -= shear_disp;
-		zshift = -1;
-	} else if (pos_diff.z < -lz_half) {
-		pos_diff.z += lz;
-		pos_diff += shear_disp;
-		zshift = 1;
-	}
-	while (pos_diff.x > lx_half) {
-		pos_diff.x -= lx;
-	}
-	while (pos_diff.x < -lx_half) {
-		pos_diff.x += lx;
-	}
-	if (!twodimension) {
-		if (pos_diff.y > ly_half) {
-			pos_diff.y -= ly;
-		} else if (pos_diff.y < -ly_half) {
-			pos_diff.y += ly;
-		}
-	}
-	return zshift;
-}
 
 void System::setSystemVolume()
 {
+	vec3d L = pbc.dimensions();
 	string indent = "  System::\t";
 	if (z_top == -1) {
-		system_height = lz;
+		system_height = L.z;
 	} else {
 		/* wall particles are at z = z_bot - a and z_top + a
 		 */
 		system_height = z_top-z_bot;
 	}
 	if (twodimension) {
-		system_volume = lx*system_height;
-		cout << indent << "lx = " << lx << " lz = " << lz << " system_height = " << system_height << endl;
+		system_volume = L.x*system_height;
+		cout << indent << "lx = " << L.x << " lz = " << L.z << " system_height = " << system_height << endl;
 	} else {
-		system_volume = lx*ly*system_height;
-		cout << indent << "lx = " << lx << " lz = " << lz << " ly = " << ly << endl;
+		system_volume = L.x*L.y*system_height;
+		cout << indent << "lx = " << L.x << " lz = " << L.z << " ly = " << L.y << endl;
 	}
 }
 

@@ -122,9 +122,6 @@ void System::gatherVelocitiesByRateDependencies(vector<vec3d> &rateprop_vel,
 {
 	/** Gather velocity components in rate proportional and rate independent parts.
 			If there is a rate dependent (but not proportional), it is left out.
-
-			[Note] The rate proportional part is a total velocity, and as such must be dealt with proper Lees-Edwards BC.
-						 The rate independent part is always a non-affine velocity.
 	*/
 	assert(control==stress || control==viscnb);
 	for (unsigned int i=0; i<rateprop_vel.size(); i++) {
@@ -147,13 +144,25 @@ void System::gatherVelocitiesByRateDependencies(vector<vec3d> &rateprop_vel,
 			}
 		}
 	}
-	for (unsigned int i=0; i<rateprop_vel.size(); i++) {
-		rateprop_vel[i] += u_inf[i];
-		rateprop_ang_vel[i] += omega_inf;
+	if (control == stress) {
+		// The u_inf, omega_inf from simple shear are proportional to \dot\gamma
+		for (unsigned int i=0; i<rateprop_vel.size(); i++) {
+			rateprop_vel[i] += u_inf[i];
+			rateprop_ang_vel[i] += omega_inf;
+		}
+	}
+	if (control == viscnb) {
+		// The u_inf, omega_inf from simple shear do not depend on the z-inflate rate
+		// The u_inf_zexp does
+		for (unsigned int i=0; i<rateprop_vel.size(); i++) {
+			rateindep_vel[i] += u_inf[i];
+			rateindep_ang_vel[i] += omega_inf;
+			rateprop_vel[i] += u_inf_zexp[i];
+		}
 	}
 }
 
-void System::calcContactXFPerParticleStressControlled()
+void System::calcContactXFPerParticleRateDependencies()
 {
 	// spring part: easy
 	// dashpot part: we have to split between rate proportional and rate independent parts.
@@ -261,7 +270,7 @@ void System::calcStressPerParticle()
 			}
 		}
 	} else {
-		calcContactXFPerParticleStressControlled();
+		calcContactXFPerParticleRateDependencies();
 	}
 
 	if (repulsiveforce) {
@@ -341,7 +350,7 @@ void System::gatherStressesByRateDependencies(Sym2Tensor &rate_prop_stress,
 	rate_prop_stress /= system_volume;
 	rate_indep_stress /= system_volume;
 
-	if (!zero_shear) {
+	if (!zero_shear && control==stress) {
 		// suspending fluid viscosity
 		rate_prop_stress += 2*E_infinity/(6*M_PI);
 	}
@@ -375,11 +384,12 @@ void System::calcStress()
 	}
 
     if (wall_rheology) {
+			vec3d L = pbc.dimensions();
         if (z_top != -1) {
-            shearstress_wall1 = force_tang_wall1/lx;
-            shearstress_wall2 = force_tang_wall2/lx;
-            normalstress_wall1 = force_normal_wall1/lx;
-            normalstress_wall2 = force_normal_wall2/lx;
+            shearstress_wall1 = force_tang_wall1/L.x;
+            shearstress_wall2 = force_tang_wall2/L.x;
+            normalstress_wall1 = force_normal_wall1/L.x;
+            normalstress_wall2 = force_normal_wall2/L.x;
         } else {
             double wall_area_in = M_PI*2*(radius_in-radius_wall_particle);
             double wall_area_out = M_PI*2*(radius_out+radius_wall_particle);

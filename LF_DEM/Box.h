@@ -28,7 +28,6 @@ private:
 	std::vector <Box*> moving_neighbors;
 	std::set <int> container;
 	std::vector <int> neighborhood_container;
-	vec3d position;
 
 public:
 	Box(){};
@@ -39,12 +38,7 @@ public:
 	void resetMovingNeighbors();
 	const std::vector <Box*> & getNeighborBox(){return static_neighbors;}
 
-	vec3d getPosition() const {return position;}
-	void setPosition(vec3d pos) {position = pos;}
-	// void is_top(bool it) {_is_top = it;};
-	// void is_bottom(bool ib) {_is_bottom = ib;};
-	// bool is_top() const {return _is_top;};
-	// bool is_bottom() const {return _is_bottom;};
+	vec3d position;
 
 	void add(int);
 	void remove(int);

@@ -270,7 +270,7 @@ std::pair<struct DBlock, struct DBlock> ContactDashpot::RFU_DBlocks() const
 		b0.col4[1] = -YC[0]*nvec->y*nvec->z;                    // 54
 		// (*,5)
 		b0.col5[0] =  YC[0]*(1-nvec->z*nvec->z);                 // 55
-		
+
 		double XA3_YA3 = XA[3] - YA[3];
 		// (*,0)
 		b1.col0[0] = YA[3] + XA3_YA3*nvec->x*nvec->x; // 00 element of the dblock
@@ -314,7 +314,7 @@ std::pair<struct DBlock, struct DBlock> ContactDashpot::RFU_DBlocks() const
 		b0.col4[1] = 0;                     // 54
 		// (*,5)
 		b0.col5[0] = 0;                 // 55
-		
+
 		// (*,0)
 		b1.col0[0] = XA[3]*nvec->x*nvec->x; // 00 element of the dblock
 		b1.col0[1] = XA[3]*nvec->x*nvec->y;           // 10
@@ -341,9 +341,9 @@ std::pair<struct DBlock, struct DBlock> ContactDashpot::RFU_DBlocks() const
 }
 
 vec3d ContactDashpot::getForceOnP0(const vec3d &vel_p0,
-								   const vec3d &vel_p1,
-								   const vec3d &ang_vel_p0,
-								   const vec3d &ang_vel_p1) const
+                                   const vec3d &vel_p1,
+                                   const vec3d &ang_vel_p0,
+                                   const vec3d &ang_vel_p1) const
 {
 	/** \brief Resistance force acting on particle p0.
 
@@ -382,9 +382,9 @@ vec3d ContactDashpot::getForceOnP0(const vec3d &vel_p0,
 
 
 vec3d ContactDashpot::getForceOnP0_nonaffine(const vec3d &na_vel_p0,
-											 const vec3d &na_vel_p1,
-											 const vec3d &na_ang_vel_p0,
-											 const vec3d &na_ang_vel_p1) const
+                                             const vec3d &na_vel_p1,
+                                             const vec3d &na_ang_vel_p0,
+                                             const vec3d &na_ang_vel_p1) const
 {
 	/** \brief Resistance force acting on particle p0.
 
@@ -421,8 +421,8 @@ vec3d ContactDashpot::getForceOnP0_nonaffine(const vec3d &na_vel_p0,
 }
 
 std::tuple<vec3d, vec3d, vec3d, vec3d> ContactDashpot::getRFU_Uinf(const vec3d &u_inf_p0,
-																   const vec3d &u_inf_p1,
-																   const vec3d &omega_inf) const
+                                                                   const vec3d &u_inf_p1,
+                                                                   const vec3d &omega_inf) const
 {
 	/** \brief */
 	if (is_active()) {

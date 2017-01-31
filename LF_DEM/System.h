@@ -37,6 +37,7 @@
 #include "StressComponent.h"
 #include "VelocityComponent.h"
 #include "ForceComponent.h"
+#include "LeesEdwards.h"
 #include "cholmod.h"
 #ifndef USE_DSFMT
 #include "MersenneTwister.h"
@@ -62,12 +63,7 @@ private:
 	int total_num_timesteps;
 	double time_; ///< time elapsed since beginning of the time evolution.
 	double time_in_simulation_units; ///< time elapsed since beginning of the time evolution. \b note: this is measured in Simulation (output) units, not in internal System units.
-	double lx;
-	double ly;
-	double lz;
-	double lx_half; // =lx/2
-	double ly_half; // =ly/2
-	double lz_half; // =lz/2
+	LeesEdwards pbc;
 	vec3d shear_strain;
 	double cumulated_strain;
 	double angle_wheel; // rotational angle of rotary couette geometory
@@ -76,10 +72,15 @@ private:
 	vec3d omegahat_inf;  // omega/shear_rate: "shape" of the flow
 	Sym2Tensor E_infinity;
 	vec3d omega_inf;
+	std::vector <vec3d> u_inf;
+
+	double zexp_rate;
+	Sym2Tensor Ehat_infinity_zexp;
+	Sym2Tensor E_infinity_zexp;
+	std::vector <vec3d> u_inf_zexp;
 
 	double particle_volume;
 
-	std::vector <vec3d> u_inf;
 	std::vector <vec3d> na_disp;
 
 	/* data */
@@ -102,8 +103,11 @@ private:
 	void setRepulsiveForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setFixedParticleForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setDashpotForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
+	void setDashpotZexpForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setHydroForceToParticle_squeeze(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setHydroForceToParticle_squeeze_tangential(std::vector<vec3d> &force, std::vector<vec3d> &torque);
+	void setHydroZexpForceToParticle_squeeze(std::vector<vec3d> &force, std::vector<vec3d> &torque);
+	void setHydroZexpForceToParticle_squeeze_tangential(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void buildResistanceMatrix();
 	void setBrownianForceToParticle(std::vector<vec3d> &force, std::vector<vec3d> &torque);
 	void setSolverRHS(const ForceComponent &fc);
@@ -121,11 +125,13 @@ private:
 	void adjustVelocityPeriodicBoundary();
 	void rushWorkFor2DBrownian(std::vector<vec3d> &vel, std::vector<vec3d> &ang_vel); // We need to implement real 2D simulation.
 	void computeUInf();
+	void computeUInfZexp();
 	void computeShearRate();
 	void computeShearRateWalls();
+	void computeZexpRate();
 	void computeForcesOnWallParticles();
 	void computeVelocityCoeffFixedParticles();
-	void rescaleVelHydroStressControlled();
+	void rescaleRateProportionalVelocities();
 	void addUpInteractionStressGU(std::vector<Sym2Tensor> &stress_comp,
 								  const std::vector<vec3d> &non_affine_vel,
 								  const std::vector<vec3d> &non_affine_ang_vel);
@@ -165,6 +171,7 @@ private:
 	void declareStressComponents();
 	void declareVelocityComponents();
 	void declareForceComponents();
+	void declareForceComponentsViscnbControlled();
 
 	template<typename T> void setupGenericConfiguration(T conf, ControlVariable control_);
 	void setupBrownian();
@@ -274,10 +281,10 @@ private:
 	int avg_dt_nb;
 	double system_volume;
 
-	vec3d shear_disp; // lees-edwards shift between top and bottom. only shear_disp.x, shear_disp.y is used
 	double max_velocity;
 	double max_sliding_velocity;
 	double target_stress;
+	double target_Pz;
 	double init_strain_shear_rate_limit;
 	double init_shear_rate_limit;
 	/* Velocity difference between top and bottom
@@ -330,12 +337,10 @@ private:
 	void declareResistance(int p0, int p1);
 	void eraseResistance(int p0, int p1);
 	void updateInteractions();
-	int periodize(vec3d&);
-	int periodizeDiff(vec3d&);
-	vec3d periodized(const vec3d&);
+	const LeesEdwards &getPeriodicBC() {return pbc;};
 	void calcStress();
 	void calcStressPerParticle();
-	void calcContactXFPerParticleStressControlled();
+	void calcContactXFPerParticleRateDependencies();
 	void gatherVelocitiesByRateDependencies(std::vector<vec3d> &rateprop_vel,
 	                                        std::vector<vec3d> &rateprop_ang_vel,
 	                                        std::vector<vec3d> &rateindep_vel,
@@ -353,31 +358,6 @@ private:
 	void (System::*eventLookUp)();
 	void eventShearJamming();
 
-	void setBoxSize(double lx_, double ly_, double lz_)
-	{
-		lx = lx_;
-		lx_half = 0.5*lx;
-		ly = ly_;
-		ly_half = 0.5*ly;
-		lz = lz_;
-		lz_half = 0.5*lz;
-	}
-
-	double get_lx()
-	{
-		return lx;
-	}
-
-	double get_ly()
-	{
-		return ly;
-	}
-
-	double get_lz()
-	{
-		return lz;
-	}
-
 	double get_time_in_simulation_units()
 	{
 		return time_in_simulation_units;
@@ -394,6 +374,7 @@ private:
 	}
 
 	void set_shear_rate(double sr);
+	void set_zexp_rate(double r);
 
 	vec3d get_vel_difference()
 	{
