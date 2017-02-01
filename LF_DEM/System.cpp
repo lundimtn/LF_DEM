@@ -1933,6 +1933,9 @@ void System::computeZexpRate()
 	 \brief Compute the shear rate under stress control conditions.
 	 */
 	assert(abs(zexp_rate-1) < 1e-15);
+	if (interaction.size() == 0) {
+		throw runtime_error(" System::computeZexpRate : there are no interactions, cannot control the pressure");
+	}
 	calcStressPerParticle();
 	Sym2Tensor rate_prop_stress;
 	Sym2Tensor rate_indep_stress;

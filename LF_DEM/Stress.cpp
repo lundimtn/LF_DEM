@@ -106,7 +106,8 @@ void System::addUpInteractionStressGU(std::vector<Sym2Tensor> &stress_comp,
 	}
 }
 
-void System::addUpInteractionStressME(std::vector<Sym2Tensor> &stress_comp)
+void System::addUpInteractionStressME(std::vector<Sym2Tensor> &stress_comp,
+                                      const Sym2Tensor &E)
 {
 	if (!lubrication) {
 		return;
@@ -115,7 +116,7 @@ void System::addUpInteractionStressME(std::vector<Sym2Tensor> &stress_comp)
 		if (inter.lubrication.is_active()) {
 			unsigned int i, j;
 			std::tie(i, j) = inter.get_par_num();
-			inter.lubrication.addMEStresslet(E_infinity,
+			inter.lubrication.addMEStresslet(E,
 			                                 stress_comp[i],
 			                                 stress_comp[j]); // R_SE:Einf-R_SU*v
 		}
@@ -263,9 +264,17 @@ void System::calcStressPerParticle()
 			                         na_velo_components[component_name].vel,
 			                         na_velo_components[component_name].ang_vel);
 		}
-		if (type == strain_stress) {
-			addUpInteractionStressME(sc.second.particle_stress);
+	}
+	if (control != viscnb) {
+		for(auto &sc: stress_components) {
+			auto type = sc.second.type;
+			if (type == strain_stress) {
+				addUpInteractionStressME(sc.second.particle_stress, E_infinity);
+			}
 		}
+	} else {
+		addUpInteractionStressME(stress_components["M_Eshear_hydro"].particle_stress, E_infinity);
+		addUpInteractionStressME(stress_components["M_Ezexp_hydro"].particle_stress, E_infinity_zexp);
 	}
 	if (control==rate) {
 		auto &cstress_XF = stress_components["xF_contact"].particle_stress;

@@ -133,9 +133,10 @@ private:
 	void computeVelocityCoeffFixedParticles();
 	void rescaleRateProportionalVelocities();
 	void addUpInteractionStressGU(std::vector<Sym2Tensor> &stress_comp,
-								  const std::vector<vec3d> &non_affine_vel,
-								  const std::vector<vec3d> &non_affine_ang_vel);
-	void addUpInteractionStressME(std::vector<Sym2Tensor> &stress_comp);
+	                              const std::vector<vec3d> &non_affine_vel,
+	                              const std::vector<vec3d> &non_affine_ang_vel);
+	void addUpInteractionStressME(std::vector<Sym2Tensor> &stress_comp,
+	                              const Sym2Tensor &E);
 
 	void computeMaxNAVelocity();
 	double (System::*calcInteractionRange)(int, int);
