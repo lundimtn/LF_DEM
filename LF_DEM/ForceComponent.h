@@ -2,6 +2,7 @@
 #define __LF_DEM__ForceComponent__
 #include <vector>
 #include "vec3d.h"
+#include "global.h"
 
 class System;
 
@@ -9,7 +10,7 @@ typedef void (System::*sysGetForceTorque)(std::vector<vec3d> &force, std::vector
 
 struct ForceComponent
 {
-	unsigned int rate_dependence;
+	RateDependence rate_dependence;
 	bool has_torque;
 	std::vector<vec3d> force;
 	std::vector<vec3d> torque;
@@ -17,8 +18,8 @@ struct ForceComponent
 
 	ForceComponent(){};
 	ForceComponent(std::size_t size,
-				   unsigned int _rate_dependence,
-				   bool _has_torque,
+	               RateDependence _rate_dependence,
+	               bool _has_torque,
 	               sysGetForceTorque _getForceTorque):
 	rate_dependence(_rate_dependence),
 	has_torque(_has_torque),

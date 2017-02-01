@@ -166,9 +166,12 @@ def snaps2yap(pos_fname,
     pcols = lf.convert_columndef_to_indices(meta_pos['column def'])
     icols = lf.convert_columndef_to_indices(meta_int['column def'])
 
+    print("Output : " + yap_filename)
+
     nb_of_frames = len(strains)
     is2d = meta_pos['Ly'] == 0
     i = 0
+    first_time = True
     for f, p, strain, rate in zip(forces, positions, strains, shear_rates):
         yap_out, f_factor =\
             interactions_bonds_yaparray(f, p, icols, pcols,
@@ -220,9 +223,11 @@ def snaps2yap(pos_fname,
         np.savetxt(yap_file, yap_out, fmt="%s "*7)
         yap_file.write("\n".encode('utf-8'))
         i += 1
-        out_str = "\r frame " + str(i) + "/"+str(nb_of_frames) +\
-                  " - " + yap_filename + \
-                  "   [force factor " + str(f_factor) + "]"
+
+        if first_time:
+            print("Force factor : " + str(f_factor))
+            first_time = False
+        out_str = "\rFrame " + str(i) + "/"+str(nb_of_frames)
         try:
             print(out_str, end="", flush=True)
         except TypeError:

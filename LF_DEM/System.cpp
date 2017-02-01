@@ -159,8 +159,13 @@ void System::allocateRessources()
 		rate_proportional_wall_force.resize(p.np_fixed);
 		rate_proportional_wall_torque.resize(p.np_fixed);
 	}
-	declareForceComponents();
+	if (control==rate || control==stress) {
+		declareForceComponents();
+	} else {
+		declareForceComponentsViscnbControlled();
+	}
 	declareVelocityComponents();
+
 	interaction_list.resize(np);
 	interaction_partners.resize(np);
 	nb_blocks_ff.resize(p.np_fixed, 0);
@@ -189,30 +194,30 @@ void System::declareForceComponents()
 
 	/******* Contact force, spring part ***********/
 	if (friction) {
-		force_components["contact"] = ForceComponent(np, RATE_INDEPENDENT, torque, &System::setContactForceToParticle);
+		force_components["contact"] = ForceComponent(np, rate_independent, torque, &System::setContactForceToParticle);
 	} else {
-		force_components["contact"] = ForceComponent(np, RATE_INDEPENDENT, !torque, &System::setContactForceToParticle);
+		force_components["contact"] = ForceComponent(np, rate_independent, !torque, &System::setContactForceToParticle);
 	}
 
 	/******* Contact force, dashpot part ***********/
 	// note that we keep the torque on, as there is nothing else to prevent tangential motion when in contact
 	// (apart from Stokes drag, which can be set arbitrarily small)
-	force_components["dashpot"] = ForceComponent(np, RATE_PROPORTIONAL, torque, &System::setDashpotForceToParticle);
+	force_components["dashpot"] = ForceComponent(np, rate_proportional, torque, &System::setDashpotForceToParticle);
 
 	/*********** Hydro force, i.e.  R_FE:E_inf *****************/
 	if (!zero_shear) {
 		if (p.lubrication_model == "normal") {
-			force_components["hydro"] = ForceComponent(np, RATE_PROPORTIONAL, !torque, &System::setHydroForceToParticle_squeeze);
+			force_components["hydro"] = ForceComponent(np, rate_proportional, !torque, &System::setHydroForceToParticle_squeeze);
 		}
 		if (p.lubrication_model == "tangential") {
-			force_components["hydro"] = ForceComponent(np, RATE_PROPORTIONAL, torque, &System::setHydroForceToParticle_squeeze_tangential);
+			force_components["hydro"] = ForceComponent(np, rate_proportional, torque, &System::setHydroForceToParticle_squeeze_tangential);
 		}
 	}
 	if (repulsiveforce) {
-		force_components["repulsion"] = ForceComponent(np, RATE_INDEPENDENT, !torque, &System::setRepulsiveForceToParticle);
+		force_components["repulsion"] = ForceComponent(np, rate_independent, !torque, &System::setRepulsiveForceToParticle);
 	}
 	if (brownian) {
-		force_components["brownian"] = ForceComponent(np, RATE_DEPENDENT, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
+		force_components["brownian"] = ForceComponent(np, rate_dependent, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
 	}
 
 	/********** Force R_FU^{mf}*(U^f-U^f_inf)  *************/
@@ -232,44 +237,44 @@ void System::declareForceComponentsViscnbControlled()
 
 	/******* Contact force, spring part ***********/
 	if (friction) {
-		force_components["contact"] = ForceComponent(np, RATE_INDEPENDENT, torque, &System::setContactForceToParticle);
+		force_components["contact"] = ForceComponent(np, rate_independent, torque, &System::setContactForceToParticle);
 	} else {
-		force_components["contact"] = ForceComponent(np, RATE_INDEPENDENT, !torque, &System::setContactForceToParticle);
+		force_components["contact"] = ForceComponent(np, rate_independent, !torque, &System::setContactForceToParticle);
 	}
 
 	/******* Contact force, dashpot part ***********/
 	// note that we keep the torque on even without friction,
 	// as there is nothing else to prevent tangential motion when in contact
 	// (apart from Stokes drag, which can be set arbitrarily small)
-	force_components["dashpot_shear"] = ForceComponent(np, RATE_INDEPENDENT, torque, &System::setDashpotForceToParticle);
-	force_components["dashpot_zexp"] = ForceComponent(np, RATE_PROPORTIONAL, torque, &System::setDashpotZexpForceToParticle);
+	force_components["dashpot_shear"] = ForceComponent(np, rate_independent, torque, &System::setDashpotForceToParticle);
+	force_components["dashpot_zexp"] = ForceComponent(np, rate_proportional, torque, &System::setDashpotZexpForceToParticle);
 
 	/*********** Hydro force, i.e.  R_FE:E_inf *****************/
 	if (!zero_shear) {
 		if (p.lubrication_model == "normal") {
-			force_components["hydro_shear"] = ForceComponent(np, RATE_INDEPENDENT, !torque, &System::setHydroForceToParticle_squeeze);
-			force_components["hydro_zexp"] = ForceComponent(np, RATE_PROPORTIONAL, !torque, &System::setHydroZexpForceToParticle_squeeze);
+			force_components["hydro_shear"] = ForceComponent(np, rate_independent, !torque, &System::setHydroForceToParticle_squeeze);
+			force_components["hydro_zexp"] = ForceComponent(np, rate_proportional, !torque, &System::setHydroZexpForceToParticle_squeeze);
 		}
 		if (p.lubrication_model == "tangential") {
-			force_components["hydro_shear"] = ForceComponent(np, RATE_INDEPENDENT, torque, &System::setHydroForceToParticle_squeeze_tangential);
-			force_components["hydro_zexp"] = ForceComponent(np, RATE_PROPORTIONAL, torque, &System::setHydroZexpForceToParticle_squeeze_tangential);
+			force_components["hydro_shear"] = ForceComponent(np, rate_independent, torque, &System::setHydroForceToParticle_squeeze_tangential);
+			force_components["hydro_zexp"] = ForceComponent(np, rate_proportional, torque, &System::setHydroZexpForceToParticle_squeeze_tangential);
 		}
 	}
 	if (repulsiveforce) {
-		force_components["repulsion"] = ForceComponent(np, RATE_INDEPENDENT, !torque, &System::setRepulsiveForceToParticle);
+		force_components["repulsion"] = ForceComponent(np, rate_independent, !torque, &System::setRepulsiveForceToParticle);
 	}
 	if (brownian) {
-		force_components["brownian"] = ForceComponent(np, RATE_DEPENDENT, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
+		force_components["brownian"] = ForceComponent(np, rate_dependent, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
 	}
 
 	/********** Force R_FU^{mf}*(U^f-U^f_inf)  *************/
 	if (mobile_fixed) {
 		// rate proportional with walls, but this can change
 		if (p.lubrication_model != "normal") {
-			force_components["from_fixed"] = ForceComponent(np, RATE_PROPORTIONAL, !torque, &System::setFixedParticleForceToParticle);
+			force_components["from_fixed"] = ForceComponent(np, rate_proportional, !torque, &System::setFixedParticleForceToParticle);
 		}
 		if (p.lubrication_model != "tangential") {
-			force_components["from_fixed"] = ForceComponent(np, RATE_PROPORTIONAL, torque, &System::setFixedParticleForceToParticle);
+			force_components["from_fixed"] = ForceComponent(np, rate_proportional, torque, &System::setFixedParticleForceToParticle);
 		}
 	}
 }
@@ -525,6 +530,7 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 	control = control_;
 
 	cerr << endl << endl << " !!!!!!! " << endl << "HARD CODED CONTROL=VISCNB" << endl << endl;
+	set_shear_rate(1);
 	control = viscnb;
 
 	setupParameters();
@@ -725,9 +731,10 @@ void System::timeStepBoxing()
 	}
 	boxset.update(pbc);
 	if (control==viscnb) {
-		boxset.inflateZ(1+zexp_rate*dt);
+		double inflate_ratio = 1+zexp_rate*dt;
+		boxset.inflateZ(inflate_ratio);
 		vec3d L = pbc.dimensions();
-		L.z *= zexp_rate;
+		L.z *= inflate_ratio;
 		pbc.set(L, pbc.shear_disp());
 	}
 }
@@ -2169,7 +2176,7 @@ void System::setFixedParticleVelocities()
 void System::rescaleRateProportionalVelocities()
 {
 	for (auto &vc: na_velo_components) {
-		if (vc.second.rate_dependence == RATE_PROPORTIONAL) {
+		if (vc.second.rate_dependence == rate_proportional) {
 			if (control==stress) {
 				vc.second *= shear_rate;
 			}

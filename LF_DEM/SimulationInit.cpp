@@ -521,7 +521,7 @@ void Simulation::setupSimulation(string in_args,
 	resolveTimeOrStrainParameters();
 
 	if (binary_conf) {
-		int format = getBinaryConfigurationFileFormat(filename_import_positions);
+		auto format = getBinaryConfigurationFileFormat(filename_import_positions);
 		ifstream file_import;
 		file_import.open(filename_import_positions.c_str(), ios::binary | ios::in);
 		if (!file_import) {
@@ -531,21 +531,25 @@ void Simulation::setupSimulation(string in_args,
 		}
 
 		switch(format) {
-			case BIN_FORMAT_BASE_NEW:
+			case bin_format_base_new:
 				{
 					auto conf = readBinaryBaseConfiguration(file_import);
 					sys.setupConfiguration(conf, control_var);
 					break;
 				}
-			case BIN_FORMAT_FIXED_VEL:
+			case bin_format_fixed_vel:
 				{
 					auto conf = readBinaryFixedVeloConfiguration(file_import);
 					sys.setupConfiguration(conf, control_var);
 					break;
 				}
+			default:
+				{
+					throw std::runtime_error("Unrecognized binary conf file format.");
+				}
 		}
 	} else {
-		int format = getTxtConfigurationFileFormat(filename_import_positions);
+		auto format = getTxtConfigurationFileFormat(filename_import_positions);
 		ifstream file_import;
 		file_import.open(filename_import_positions.c_str());
 		if (!file_import) {
@@ -555,29 +559,33 @@ void Simulation::setupSimulation(string in_args,
 		}
 
 		switch(format) {
-			case TXT_FORMAT_BASE_OLD:
+			case txt_format_base_old:
 				{
 					auto conf = readTxtBaseConfiguration(file_import);
 					sys.setupConfiguration(conf, control_var);
 					break;
 				}
-			case TXT_FORMAT_BASE_NEW:
+			case txt_format_base_new:
 				{
 					auto conf = readTxtBaseConfiguration(file_import);
 					sys.setupConfiguration(conf, control_var);
 					break;
 				}
-			case TXT_FORMAT_FIXED_VEL:
+			case txt_format_fixed_vel:
 				{
 					auto conf = readTxtFixedVeloConfiguration(file_import);
 					sys.setupConfiguration(conf, control_var);
 					break;
 				}
-			case TXT_FORMAT_CIRCULAR_COUETTE:
+			case txt_format_circular_couette:
 				{
 					auto conf = readTxtCircularCouetteConfiguration(file_import);
 					sys.setupConfiguration(conf, control_var);
 					break;
+				}
+			default:
+				{
+					throw std::runtime_error("Unrecognized text conf file format.");
 				}
 		}
 	}

@@ -4,17 +4,25 @@
 #include <string>
 #include "Sym2Tensor.h"
 
+
+enum StressType {
+	velocity_stress,
+	strain_stress,
+	xf_stress,
+	brownian_stress
+};
+
 struct StressComponent
 {
-	unsigned int type;
-	unsigned int rate_dependence;
+	StressType type;
+	RateDependence rate_dependence;
 	std::string group;
 	std::vector<Sym2Tensor> particle_stress;
 
 	StressComponent(){};
-	StressComponent(unsigned int _type,
+	StressComponent(StressType _type,
 	                std::size_t size,
-	                unsigned int _rate_dependence,
+	                RateDependence _rate_dependence,
 	                const std::string &_group):
 	type(_type),
 	rate_dependence(_rate_dependence), group(_group)

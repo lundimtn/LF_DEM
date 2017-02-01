@@ -1,3 +1,6 @@
+#ifndef __LF_DEM__Configuration__
+#define __LF_DEM__Configuration__
+
 #include <stdexcept>
 #include <vector>
 #include <string>
@@ -7,8 +10,15 @@
 #include "Contact.h"
 #include "vec3d.h"
 
-#ifndef __LF_DEM__Configuration__
-#define __LF_DEM__Configuration__
+enum InputConfigurationFileFormat {
+	bin_format_base_old,
+	bin_format_base_new,
+	bin_format_fixed_vel,
+	txt_format_base_old,
+	txt_format_base_new,
+	txt_format_fixed_vel,
+	txt_format_circular_couette
+};
 
 struct base_configuration {
   double lx, ly, lz;
@@ -172,7 +182,7 @@ inline int getBinaryConfigurationFileFormat(const std::string& filename_import_p
   if (switch_ == -1) {
     file_import.read((char*)&binary_format_version, sizeof(int));
   } else {
-    binary_format_version = BIN_FORMAT_BASE_NEW; // may also be 1, but will be determined later
+    binary_format_version = bin_format_base_new; // may also be 1, but will be determined later
   }
   return binary_format_version;
 }
@@ -196,9 +206,9 @@ inline int getTxtConfigurationFileFormat(const std::string& filename_import_posi
   if (meta_data.find("format") != meta_data.end()) {
     return atoi(meta_data["format"].c_str());
   } else if (meta_data.find("radius_in") != meta_data.end()) {
-    return TXT_FORMAT_CIRCULAR_COUETTE;
+    return txt_format_circular_couette;
   } else {
-    return TXT_FORMAT_BASE_OLD;
+    return txt_format_base_old;
   }
 }
 
