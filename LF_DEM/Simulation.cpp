@@ -35,6 +35,7 @@ diminish_output(false)
 	unit_longname["kt"] = "kt";
 	unit_longname["kr"] = "kr";
 	unit_longname["s"] = "stress";
+	unit_longname["sz"] = "sigma_zz";
 
 	force_value_ptr["hydro"] = &dimensionless_rate; // the dimensionless hydrodynamic force is also the dimensionless shear rate
 	force_value_ptr["repulsion"] = &sys.p.repulsion;
@@ -45,6 +46,7 @@ diminish_output(false)
 	force_value_ptr["kn"] = &sys.p.kn;
 	force_value_ptr["kt"] = &sys.p.kt;
 	force_value_ptr["kr"] = &sys.p.kr;
+	force_value_ptr["sigma_zz"] = &sys.p.sigma_zz;
 	kill = false;
 };
 

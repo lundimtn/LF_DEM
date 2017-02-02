@@ -146,6 +146,8 @@ struct ParameterSet
 	double theta_shear;  ///< Shear direction, in degress, 0 is shear along x, 90 is shear along y [0]
 	double strain_reversal;  ///< for test_simulation = 21 (rtest1)
 	bool keep_input_strain;  ///< Use as initial strain value the strain from initial Lees-Edwards displacement [false]
+	bool impose_sigma_zz; ///< [false]
+	double sigma_zz; ///< imposed Z-normal stress [0]
 };
 
 #endif/* defined(__LF_DEM__ParameterSet__) */

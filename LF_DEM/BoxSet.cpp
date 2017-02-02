@@ -4,10 +4,10 @@
 using namespace std;
 
 void BoxSet::init(double interaction_dist,
-                  LeesEdwards pbc,
-                  unsigned int np)
+									LeesEdwards pbc,
+									unsigned int np)
 {
-	string indent = "  BoxSet::\t";
+	string indent = "	BoxSet::\t";
 	cout << indent << "Setting up Cell List System ... ";
 	boxMap.resize(np);
 	for (auto &bx: boxMap) {
@@ -46,22 +46,8 @@ void BoxSet::init(double interaction_dist,
 		box_xsize = system_dimensions.x/x_box_nb;
 		box_ysize = system_dimensions.y/y_box_nb;
 		box_zsize = system_dimensions.z/z_box_nb;
-		int m1p1[] = {-1, 1};
-		for (int a : m1p1) {
-			for (int b : m1p1) {
-				auto far_corner = 1.4999999*vec3d(a*box_xsize, b*box_ysize, box_zsize);
-				top_probing_positions.push_back(far_corner);
-				top_probing_positions.push_back(far_corner-vec3d(a*box_xsize, 0, 0));
-				top_probing_positions.push_back(far_corner-vec3d(a*box_xsize, b*box_ysize, 0));
-				top_probing_positions.push_back(far_corner-vec3d(0, b*box_ysize, 0));
+		buildProbingPositions();
 
-				far_corner = 1.4999999*vec3d(a*box_xsize, b*box_ysize, -box_zsize);
-				bottom_probing_positions.push_back(far_corner);
-				bottom_probing_positions.push_back(far_corner-vec3d(a*box_xsize, 0, 0));
-				bottom_probing_positions.push_back(far_corner-vec3d(a*box_xsize, b*box_ysize, 0));
-				bottom_probing_positions.push_back(far_corner-vec3d(0, b*box_ysize, 0));
-			}
-		}
 		box_nb = x_box_nb*y_box_nb*z_box_nb;
 		allocateBoxes();
 		// give them their position
@@ -70,6 +56,26 @@ void BoxSet::init(double interaction_dist,
 		assignNeighbors(pbc);
 	}
 	cout << " [ok]" << endl;
+}
+
+void BoxSet::buildProbingPositions()
+{
+	int m1p1[] = {-1, 1};
+	for (int a : m1p1) {
+		for (int b : m1p1) {
+			auto far_corner = 1.4999999*vec3d(a*box_xsize, b*box_ysize, box_zsize);
+			top_probing_positions.push_back(far_corner);
+			top_probing_positions.push_back(far_corner-vec3d(a*box_xsize, 0, 0));
+			top_probing_positions.push_back(far_corner-vec3d(a*box_xsize, b*box_ysize, 0));
+			top_probing_positions.push_back(far_corner-vec3d(0, b*box_ysize, 0));
+
+			far_corner = 1.4999999*vec3d(a*box_xsize, b*box_ysize, -box_zsize);
+			bottom_probing_positions.push_back(far_corner);
+			bottom_probing_positions.push_back(far_corner-vec3d(a*box_xsize, 0, 0));
+			bottom_probing_positions.push_back(far_corner-vec3d(a*box_xsize, b*box_ysize, 0));
+			bottom_probing_positions.push_back(far_corner-vec3d(0, b*box_ysize, 0));
+		}
+	}
 }
 
 void BoxSet::inflateZ(double inflation_ratio)
@@ -84,6 +90,7 @@ void BoxSet::inflateZ(double inflation_ratio)
 	for (auto &bx: Boxes) {
 		bx->position.z *= inflation_ratio;
 	}
+	buildProbingPositions();
 }
 
 void BoxSet::allocateBoxes()
@@ -147,7 +154,7 @@ void BoxSet::assignNeighborsBottom(const LeesEdwards &pbc)
 {
 	for (auto& bx : BottomBoxes) {
 		vec3d delta;
-		// boxes  at same level and above first: these are fixed once and for all in the simulation
+		// boxes	at same level and above first: these are fixed once and for all in the simulation
 		int m10p1[] = {-1, 0, 1};
 		int p10[] = {0, 1};
 		for (const auto& a : m10p1) {
@@ -170,7 +177,7 @@ void BoxSet::assignNeighborsTop(const LeesEdwards &pbc)
 {
 	for (auto& bx : TopBoxes) {
 		vec3d delta;
-		// boxes  at same level and bottom first: these are fixed once and for all in the simulation
+		// boxes	at same level and bottom first: these are fixed once and for all in the simulation
 		int m10p1[] = {-1, 0, 1};
 		int m10[] = {-1, 0};
 		for (const auto & a : m10p1) {
@@ -264,6 +271,9 @@ void BoxSet::updateNeighbors(const LeesEdwards &pbc)
 //public methods
 void BoxSet::update(const LeesEdwards &pbc)
 {
+	auto L = pbc.dimensions();
+	double inflate_ratio = L.z/box_zsize/z_box_nb;
+	inflateZ(inflate_ratio);
 	if (_is_boxed) {
 		updateNeighbors(pbc);
 	}
@@ -285,7 +295,7 @@ Box* BoxSet::whichBox(const vec3d &pos)
 	unsigned int label = ix*y_box_nb*z_box_nb+iy*z_box_nb+iz;
 	if (label > box_labels.size()-1) {
 		ostringstream error_str;
-		error_str  << " BoxSet: trying to box position out of boundaries \"" << pos	<< "\"" << endl;
+		error_str	<< " BoxSet: trying to box position out of boundaries \"" << pos	<< "\"" << endl;
 		throw runtime_error(error_str.str());
 	}
 	return box_labels[label];
@@ -312,7 +322,7 @@ void BoxSet::printBoxNetwork()
 	for (const auto& bx : Boxes) {
 		const auto& neighbors = bx->getNeighborBox();
 		for (const auto& neighbor_box : neighbors) {
-			cerr << " "  << neighbors.size() << " " << bx->position << " ";
+			cerr << " "	<< neighbors.size() << " " << bx->position << " ";
 			cerr << neighbor_box->position << endl;
 		}
 	}

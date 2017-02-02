@@ -725,6 +725,10 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 		p.np_fixed = atoi(value.c_str());
 	} else if (keyword == "keep_input_strain") {
 		p.keep_input_strain = str2bool(value);
+	} else if (keyword == "sigma_zz") {
+		input_values[keyword] = str2DimensionalValue("force", keyword, value, force_value_ptr[keyword]);
+	} else if (keyword == "impose_sigma_zz") {
+		p.impose_sigma_zz = str2bool(value);
 	} else {
 		ostringstream error_str;
 		error_str  << "keyword " << keyword << " is not associated with an parameter" << endl;
@@ -845,6 +849,8 @@ void Simulation::setDefaultParameters(string input_scale)
 	autoSetParameters("event_handler", "");
 	autoSetParameters("simulation_mode", "0");
 	autoSetParameters("keep_input_strain", "false");
+	autoSetParameters("impose_sigma_zz", "false");
+	autoSetParameters("sigma_zz", "0"+input_scale);
 }
 
 

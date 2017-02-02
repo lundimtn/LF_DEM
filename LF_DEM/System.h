@@ -284,7 +284,6 @@ private:
 	double max_velocity;
 	double max_sliding_velocity;
 	double target_stress;
-	double target_Pz;
 	double init_strain_shear_rate_limit;
 	double init_shear_rate_limit;
 	/* Velocity difference between top and bottom

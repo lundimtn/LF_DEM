@@ -45,7 +45,7 @@ inline void LeesEdwards::apply_strain(vec3d strain_increment_zortho)
 	// homothety along z
 	// we do it before shear because it affects it through L.z
 	L.z += L.z*strain_increment_zortho.z;
-
+	Lhalf = L/2;
 	// shear: flow in x/y, gradient z
 	vec3d shear_increment ({strain_increment_zortho.x,
 													strain_increment_zortho.y,

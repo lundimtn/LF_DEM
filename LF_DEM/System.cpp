@@ -1917,7 +1917,7 @@ void System::computeZexpRate()
 	Sym2Tensor rate_indep_stress;
 	gatherStressesByRateDependencies(rate_prop_stress, rate_indep_stress);
 	double newtonian_viscosity = doubledot(rate_prop_stress, E_infinity_zexp); // computed with rate=1, o here it is also the viscosity.
-	double newtonian_stress = target_Pz - doubledot(rate_indep_stress, E_infinity_zexp);
+	double newtonian_stress = p.sigma_zz - doubledot(rate_indep_stress, E_infinity_zexp);
 
 	set_zexp_rate(newtonian_stress/newtonian_viscosity);
 }
@@ -2177,10 +2177,6 @@ void System::computeVelocities(bool velocity_components)
 	 */
 	stokes_solver.resetRHS();
 	resetForceComponents();
-
-	target_Pz = -2;
-	setImposedFlow({0, 0, 0.5, 0, 0, 0},
-	               {0, 0.5, 0});
 
 	if (control==rate) {
 		computeUInf();

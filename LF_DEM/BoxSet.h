@@ -45,6 +45,7 @@ private:
 	// init methods
 	void allocateBoxes();
 	void positionBoxes();
+	void buildProbingPositions();
 	void assignNeighbors(const LeesEdwards &);
 	void assignNeighborsBulk(const LeesEdwards &);
 	void assignNeighborsTop(const LeesEdwards &);
