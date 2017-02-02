@@ -362,7 +362,7 @@ void Simulation::exportForceAmplitudes()
 }
 
 void Simulation::setupNonDimensionalization(double dimensionlessnumber,
-											string input_scale){
+                                            string input_scale){
 	/**
 	 \brief Non-dimensionalize the simulation.
 
@@ -509,6 +509,13 @@ void Simulation::setupSimulation(string in_args,
 	}
 	setDefaultParameters(input_scale);
 	readParameterFile(filename_parameters);
+	if (p.impose_sigma_zz) {
+		if (control_var == stress) {
+			throw runtime_error("controlling shear and normal stresses at once not implemented yet");
+		} else {
+			control_var = viscnb;
+		}
+	}
 	setupOptionalSimulation(indent);
 	tagStrainParameters();
 	setupNonDimensionalization(dimensionlessnumber, input_scale);
@@ -938,14 +945,11 @@ string Simulation::prepareSimulationName(bool binary_conf,
 			}
 		}
 	}
-	if (control_var==rate) {
+	if (control_var==rate || control_var==viscnb) {
 		string_control_parameters << "_" << "rate";
 	}
 	if (control_var==stress) {
 		string_control_parameters << "_" << "stress";
-	}
-	if (control_var==viscnb) {
-		string_control_parameters << "_" << "viscnb";
 	}
 	string_control_parameters << dimensionlessnumber << input_scale;
 	ss_simu_name << string_control_parameters.str();

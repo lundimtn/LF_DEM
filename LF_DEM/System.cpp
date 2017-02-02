@@ -527,11 +527,6 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 	np_mobile = np - p.np_fixed;
 	twodimension = conf.ly == 0;
 	control = control_;
-
-	cerr << endl << endl << " !!!!!!! " << endl << "HARD CODED CONTROL=VISCNB" << endl << endl;
-	set_shear_rate(1);
-	control = viscnb;
-
 	setupParameters();
 	// Memory
 	allocateRessources();
