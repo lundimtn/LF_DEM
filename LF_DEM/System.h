@@ -64,8 +64,7 @@ private:
 	double time_; ///< time elapsed since beginning of the time evolution.
 	double time_in_simulation_units; ///< time elapsed since beginning of the time evolution. \b note: this is measured in Simulation (output) units, not in internal System units.
 	LeesEdwards pbc;
-	vec3d shear_strain;
-	double cumulated_strain;
+	vec3d shear_strain; // used only in wall_rheology and simulation_mode 31
 	double angle_wheel; // rotational angle of rotary couette geometory
 	double shear_rate;
 	Sym2Tensor Ehat_infinity; // E/shear_rate: "shape" of the flow
@@ -399,12 +398,16 @@ private:
 
 	vec3d get_shear_strain()
 	{
-		return shear_strain;
+		if (wall_rheology || p.simulation_mode == 31) {
+			return shear_strain;
+		} else {
+			return pbc.shear_strain();
+		}
 	}
 
 	double get_cumulated_strain()
 	{
-		return cumulated_strain;
+		return pbc.cumulated_strain();
 	}
 
 	double get_angle_wheel()
