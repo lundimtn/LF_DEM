@@ -528,9 +528,9 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 	twodimension = conf.ly == 0;
 	control = control_;
 
-	// cerr << endl << endl << " !!!!!!! " << endl << "HARD CODED CONTROL=VISCNB" << endl << endl;
-	// set_shear_rate(1);
-	// control = viscnb;
+	cerr << endl << endl << " !!!!!!! " << endl << "HARD CODED CONTROL=VISCNB" << endl << endl;
+	set_shear_rate(1);
+	control = viscnb;
 
 	setupParameters();
 	// Memory
@@ -701,6 +701,9 @@ void System::timeStepBoxing()
 	 */
 	if (!zero_shear) {
 		vec3d strain_increment = 2*dot(E_infinity, {0, 0, 1})*dt;
+		if (control==viscnb) {
+			strain_increment += dot(E_infinity_zexp, {0, 0, 1})*dt;
+		}
 		pbc.apply_strain(strain_increment);
 	} else {
 		if (wall_rheology || p.simulation_mode == 31) {
