@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 #include <stdexcept>
-
+#include <limits>
 
 class lf_file {
 public:
@@ -204,12 +204,24 @@ inline std::vector<std::vector<double>> lf_data_file::get_data() const {
 /********** Private lf_data_file methods *************/
 inline void lf_data_file::read_data() {
   std::vector<double> record (col_nb());
-  do {
+  while (true) {
     for (auto &r: record) {
       f >> r;
+      if (f.eof()) {
+        return;
+      }
+      if (f.fail()) {
+        if (r == std::numeric_limits<double>::max()) {
+          throw std::runtime_error(" double overflow");
+        } else if (r == std::numeric_limits<double>::min()) {
+          r = 0;
+        } else {
+          throw std::runtime_error(" unknown parsing error");
+        }
+      }
     }
     data.push_back(record);
-  } while (!f.eof());
+  }
 }
 
 
