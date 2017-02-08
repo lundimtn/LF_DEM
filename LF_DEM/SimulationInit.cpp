@@ -61,7 +61,7 @@ void Simulation::echoInputFiles(string in_args,
 
 void Simulation::buildFullSetOfForceRatios(){
 	// determine the complete set of force_ratios from the dimensionless forces
-	std::map <std::string, DimensionalValue> input_forces;
+	std::map <std::string, Dimensional::DimensionalValue> input_forces;
 	for (const auto& x: input_values) {
 		if (x.second.type == "force") {
 			input_forces[x.first] = x.second;
@@ -104,7 +104,7 @@ void Simulation::resolveUnitSystem(string unit_force)
 	 */
 
 	// the unit_force has a value of 1*unit_force (says captain obvious)
-	DimensionalValue inv;
+	Dimensional::DimensionalValue inv;
 	inv.type = "force";
 	inv.value = force_value_ptr[unit_force];
 	inv.unit = unit_force;
@@ -175,7 +175,7 @@ void Simulation::catchForcesInStressUnits(const string &stress_unit)
 }
 
 void Simulation::setupNonDimensionalizationStressControlled(double dimensionlessnumber,
-															string stress_unit)
+                                                            string stress_unit)
 {
 	/**
 	 \brief Chooses units for the simulation and convert the forces to this unit (stress controlled case).
@@ -223,7 +223,7 @@ void Simulation::setupNonDimensionalizationStressControlled(double dimensionless
 // -r [val]r  ---> val = F_H0/F_R0 = shear_rate/shear_rate_R0
 // -r [val]b  ---> val = F_H0/F_B0 = shear_rate/shear_rate_B0
 void Simulation::setupNonDimensionalizationRateControlled(double dimensionlessnumber,
-														  string input_scale)
+                                                          string input_scale)
 {
 	/**
 	 \brief Choose units for the simulation and convert the forces to this unit (rate controlled case).
@@ -246,7 +246,7 @@ void Simulation::setupNonDimensionalizationRateControlled(double dimensionlessnu
 	if (dimensionlessnumber == 0) {
 		throw runtime_error("Vanishing rate not handled... yet! ");
 	}
-	DimensionalValue inv;
+	Dimensional::DimensionalValue inv;
 	inv.type = "force";
 	inv.value = force_value_ptr[input_scale];
 	inv.unit = "hydro";
@@ -274,7 +274,7 @@ void Simulation::setLowPeclet()
 	p.dt *= p.Pe_switch; // to make things continuous at Pe_switch
 }
 
-void Simulation::changeUnit(DimensionalValue &x, string new_unit)
+void Simulation::changeUnit(Dimensional::DimensionalValue &x, string new_unit)
 {
 	/**
 	 \brief Convert DimensionalValue x from unit x.unit to unit new_unit.
@@ -369,12 +369,12 @@ void Simulation::setupNonDimensionalization(double dimensionlessnumber,
 		This function determines the most appropriate unit scales to use in the System class depending on the input parameters (Brownian/non-Brownian, shear rate, stress/rate controlled), and converts all the input values in these units.
 	 */
 	input_scale = unit_longname[input_scale];
-	if (control_var == rate) {
+	if (control_var == ControlVariable::rate) {
 		input_rate = dimensionlessnumber; // @@@ Renaming is required?
 	}
-	if (control_var == rate) {
+	if (control_var == ControlVariable::rate) {
 		setupNonDimensionalizationRateControlled(dimensionlessnumber, input_scale);
-	} else if (control_var == stress) {
+	} else if (control_var == ControlVariable::stress) {
 		setupNonDimensionalizationStressControlled(dimensionlessnumber, input_scale);
 	} else {
 		ostringstream error_str;
@@ -399,13 +399,13 @@ void Simulation::assertParameterCompatibility()
 			throw runtime_error(error_str.str());
 		}
 	}
-	if (control_var == stress) {
+	if (control_var == ControlVariable::stress) {
 		if (p.integration_method != 0) {
 			cerr << "Warning : use of the Predictor-Corrector method for the stress controlled simulation is experimental." << endl;
 		}
 		//p.integration_method = 0;
 	}
-	if (control_var == viscnb) {
+	if (control_var == ControlVariable::viscnb) {
 		if (sys.mobile_fixed) {
 			throw runtime_error("Cannot run viscous number controlled simulations with fixed particles.");
 		}
@@ -510,10 +510,10 @@ void Simulation::setupSimulation(string in_args,
 	setDefaultParameters(input_scale);
 	readParameterFile(filename_parameters);
 	if (p.impose_sigma_zz) {
-		if (control_var == stress) {
+		if (control_var == ControlVariable::stress) {
 			throw runtime_error("controlling shear and normal stresses at once not implemented yet");
 		} else {
-			control_var = viscnb;
+			control_var = ControlVariable::viscnb;
 		}
 	}
 	setupOptionalSimulation(indent);
@@ -734,6 +734,7 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 		p.keep_input_strain = str2bool(value);
 	} else if (keyword == "sigma_zz") {
 		input_values[keyword] = str2DimensionalValue("force", keyword, value, force_value_ptr[keyword]);
+		*(force_value_ptr[keyword]) /= 6*M_PI;
 	} else if (keyword == "impose_sigma_zz") {
 		p.impose_sigma_zz = str2bool(value);
 	} else {
@@ -945,10 +946,10 @@ string Simulation::prepareSimulationName(bool binary_conf,
 			}
 		}
 	}
-	if (control_var==rate || control_var==viscnb) {
+	if (control_var==ControlVariable::rate || control_var==ControlVariable::viscnb) {
 		string_control_parameters << "_" << "rate";
 	}
-	if (control_var==stress) {
+	if (control_var==ControlVariable::stress) {
 		string_control_parameters << "_" << "stress";
 	}
 	string_control_parameters << dimensionlessnumber << input_scale;

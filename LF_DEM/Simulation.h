@@ -37,10 +37,10 @@ private:
 	ParameterSet p_initial;
 	std::map <std::string, double> force_ratios; // pairs: (force_type_1/force_type_2, force_value_1/force_value_2)
 	std::map <std::string, std::string> unit_longname;
-	std::map <std::string, DimensionalValue> input_values;
+	std::map <std::string, Dimensional::DimensionalValue> input_values;
 	std::map <std::string, double*> force_value_ptr;
 	std::string header_imported_configulation[2];
-	ControlVariable control_var;
+	ControlVariable::ControlVariable control_var;
 	double shear_rate_expectation;
 	double strain_end;
 	double time_end;
@@ -84,7 +84,7 @@ public:
 							   bool binary_conf,
 							   double dimensionless_number,
 							   std::string input_scale,
-							   ControlVariable control_variable,
+							   ControlVariable::ControlVariable control_variable,
 							   std::string simu_identifier);
 	// void simulationfinedSequence(std::string seq_type, std::string in_args, std::vector<std::string> &input_files, bool binary_conf, std::string control_variable);
 
@@ -93,7 +93,7 @@ public:
 								bool binary_conf,
 								double dimensionless_number,
 								std::string input_scale,
-								ControlVariable control_variable,
+								ControlVariable::ControlVariable control_variable,
 								std::string simu_identifier);
 
 	void setupSimulation(std::string in_args,
@@ -140,7 +140,7 @@ public:
 	std::string getMetaParameter(std::map<std::string,std::string> &, std::string &);
 	void exportForceAmplitudes();
 	void setLowPeclet();
-	void changeUnit(DimensionalValue &x, std::string new_unit);
+	void changeUnit(Dimensional::DimensionalValue &x, std::string new_unit);
 	void buildFullSetOfForceRatios();
 
 	void resolveUnitSystem(std::string long_unit);
@@ -152,10 +152,10 @@ public:
 	void setupNonDimensionalizationStressControlled(double dimensionlessnumber,
 													std::string input_scale);
 	void catchForcesInStressUnits(const std::string &stress_unit);
-	DimensionalValue str2DimensionalValue(std::string type,
-										  std::string keyword,
-										  std::string value_str,
-										  double* value_ptr);
+	Dimensional::DimensionalValue str2DimensionalValue(std::string type,
+	                                                   std::string keyword,
+	                                                   std::string value_str,
+	                                                   double* value_ptr);
 	/*
 	 * For outputs
 	 */

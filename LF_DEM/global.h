@@ -135,17 +135,20 @@ inline std::vector<std::string> splitString(const std::string& str){
 	return elements;
 }
 
+namespace ControlVariable {
 enum ControlVariable {
 	rate,
 	stress,
 	viscnb
 };
+}
 
+namespace RateDependence {
 enum RateDependence {
-	rate_independent,
-	rate_dependent,
-	rate_proportional
+	independent,
+	dependent,
+	proportional
 };
-
+}
 
 #endif /* defined(__LF_DEM__global__) */

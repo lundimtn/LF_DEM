@@ -173,7 +173,8 @@ private:
 	void declareForceComponents();
 	void declareForceComponentsViscnbControlled();
 
-	template<typename T> void setupGenericConfiguration(T conf, ControlVariable control_);
+	template<typename T> void setupGenericConfiguration(T conf,
+	                                                    ControlVariable::ControlVariable control_);
 	void setupBrownian();
 	void setupParameters();
 	void setupParametersContacts();
@@ -199,7 +200,7 @@ private:
 	bool pairwise_resistance;
 	// Simulation parameters
 	bool twodimension;
-	ControlVariable control;
+	ControlVariable::ControlVariable control;
 	bool zero_shear;
 	bool wall_rheology;
 	bool mobile_fixed;
@@ -324,9 +325,12 @@ private:
 	std::vector <struct contact_state> getContacts();
 	struct base_configuration getConfiguration();
 	void setInteractions_GenerateInitConfig();
-	void setupConfiguration(struct base_configuration c, ControlVariable control_);
-	void setupConfiguration(struct fixed_velo_configuration c, ControlVariable control_);
-	void setupConfiguration(struct circular_couette_configuration c, ControlVariable control_);
+	void setupConfiguration(struct base_configuration c,
+	                        ControlVariable::ControlVariable control_);
+	void setupConfiguration(struct fixed_velo_configuration c,
+	                        ControlVariable::ControlVariable control_);
+	void setupConfiguration(struct circular_couette_configuration c,
+	                        ControlVariable::ControlVariable control_);
 	void allocateRessources();
 	void timeEvolution(double time_end, double strain_end);
 	void displacement(int i, const vec3d& dr);

@@ -11,7 +11,7 @@ UseMetis = yes
 install_dir = ~/bin/
 
 # C++ compiler
-CXX=clang
+CXX=g++
 
 # Libraries
 #

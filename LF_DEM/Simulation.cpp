@@ -274,12 +274,12 @@ void Simulation::printProgress()
  * Main simulation
  */
 void Simulation::simulationSteadyShear(string in_args,
-									   vector<string>& input_files,
-									   bool binary_conf,
-									   double dimensionless_number,
-									   string input_scale,
-									   ControlVariable control_variable,
-									   string simu_identifier)
+                                       vector<string>& input_files,
+                                       bool binary_conf,
+                                       double dimensionless_number,
+                                       string input_scale,
+                                       ControlVariable::ControlVariable control_variable,
+                                       string simu_identifier)
 {
 	string indent = "  Simulation::\t";
 	control_var = control_variable;
@@ -325,12 +325,12 @@ void Simulation::simulationSteadyShear(string in_args,
 }
 
 void Simulation::simulationInverseYield(string in_args,
-										vector<string>& input_files,
-										bool binary_conf,
-										double dimensionless_number,
-										string input_scale,
-										ControlVariable control_variable,
-										string simu_identifier)
+                                        vector<string>& input_files,
+                                        bool binary_conf,
+                                        double dimensionless_number,
+                                        string input_scale,
+                                        ControlVariable::ControlVariable control_variable,
+                                        string simu_identifier)
 {
 	control_var = control_variable;
 	setupSimulation(in_args, input_files, binary_conf, dimensionless_number, input_scale, simu_identifier);
@@ -422,12 +422,12 @@ void Simulation::outputComputationTime()
 	fout_time << timestep_from_1 << endl;
 }
 
-DimensionalValue Simulation::str2DimensionalValue(string type,
-                                                  string name,
-                                                  string value_str,
-                                                  double *value_ptr)
+Dimensional::DimensionalValue Simulation::str2DimensionalValue(string type,
+                                                               string name,
+                                                               string value_str,
+                                                               double *value_ptr)
 {
-	DimensionalValue inv;
+	Dimensional::DimensionalValue inv;
 	inv.type = type;
 	inv.value = value_ptr;
 
@@ -547,9 +547,9 @@ double Simulation::getRate()
 	/**
 	 \brief The shear rate in the input units
 	 */
-	if (control_var == rate) {
+	if (control_var == ControlVariable::rate) {
 		return input_rate;
-	} else if (control_var == stress) {
+	} else if (control_var == ControlVariable::stress) {
 		return sys.get_shear_rate();
 	} else {
 		return 1;

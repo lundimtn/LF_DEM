@@ -10,7 +10,7 @@ typedef void (System::*sysGetForceTorque)(std::vector<vec3d> &force, std::vector
 
 struct ForceComponent
 {
-	RateDependence rate_dependence;
+	RateDependence::RateDependence rate_dependence;
 	bool has_torque;
 	std::vector<vec3d> force;
 	std::vector<vec3d> torque;
@@ -18,7 +18,7 @@ struct ForceComponent
 
 	ForceComponent(){};
 	ForceComponent(std::size_t size,
-	               RateDependence _rate_dependence,
+	               RateDependence::RateDependence _rate_dependence,
 	               bool _has_torque,
 	               sysGetForceTorque _getForceTorque):
 	rate_dependence(_rate_dependence),

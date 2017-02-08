@@ -15,14 +15,14 @@ enum StressType {
 struct StressComponent
 {
 	StressType type;
-	RateDependence rate_dependence;
+	RateDependence::RateDependence rate_dependence;
 	std::string group;
 	std::vector<Sym2Tensor> particle_stress;
 
 	StressComponent(){};
 	StressComponent(StressType _type,
 	                std::size_t size,
-	                RateDependence _rate_dependence,
+	                RateDependence::RateDependence _rate_dependence,
 	                const std::string &_group):
 	type(_type),
 	rate_dependence(_rate_dependence), group(_group)

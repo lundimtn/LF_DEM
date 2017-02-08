@@ -6,13 +6,13 @@
 
 struct VelocityComponent
 {
-	RateDependence rate_dependence;
+	RateDependence::RateDependence rate_dependence;
 	std::vector<vec3d> vel;
 	std::vector<vec3d> ang_vel;
 
 	VelocityComponent(){};
 	VelocityComponent(std::size_t size,
-	                  RateDependence _rate_dependence):
+	                  RateDependence::RateDependence _rate_dependence):
 	rate_dependence(_rate_dependence)
 	{
 		vel.resize(size);

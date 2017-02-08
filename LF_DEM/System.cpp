@@ -78,7 +78,7 @@ cohesion(false),
 critical_load(false),
 lowPeclet(false),
 twodimension(false),
-control(rate),
+control(ControlVariable::rate),
 zero_shear(false),
 wall_rheology(false),
 mobile_fixed(false),
@@ -145,7 +145,7 @@ void System::allocateRessources()
 			v.reset();
 		}
 	}
-	if (control==viscnb) {
+	if (control==ControlVariable::viscnb) {
 		u_inf_zexp.resize(np);
 		for (auto &v: u_inf_zexp) {
 			v.reset();
@@ -158,7 +158,7 @@ void System::allocateRessources()
 		rate_proportional_wall_force.resize(p.np_fixed);
 		rate_proportional_wall_torque.resize(p.np_fixed);
 	}
-	if (control==rate || control==stress) {
+	if (control==ControlVariable::rate || control==ControlVariable::stress) {
 		declareForceComponents();
 	} else {
 		declareForceComponentsViscnbControlled();
@@ -193,30 +193,30 @@ void System::declareForceComponents()
 
 	/******* Contact force, spring part ***********/
 	if (friction) {
-		force_components["contact"] = ForceComponent(np, rate_independent, torque, &System::setContactForceToParticle);
+		force_components["contact"] = ForceComponent(np, RateDependence::independent, torque, &System::setContactForceToParticle);
 	} else {
-		force_components["contact"] = ForceComponent(np, rate_independent, !torque, &System::setContactForceToParticle);
+		force_components["contact"] = ForceComponent(np, RateDependence::independent, !torque, &System::setContactForceToParticle);
 	}
 
 	/******* Contact force, dashpot part ***********/
 	// note that we keep the torque on, as there is nothing else to prevent tangential motion when in contact
 	// (apart from Stokes drag, which can be set arbitrarily small)
-	force_components["dashpot"] = ForceComponent(np, rate_proportional, torque, &System::setDashpotForceToParticle);
+	force_components["dashpot"] = ForceComponent(np, RateDependence::proportional, torque, &System::setDashpotForceToParticle);
 
 	/*********** Hydro force, i.e.  R_FE:E_inf *****************/
 	if (!zero_shear) {
 		if (p.lubrication_model == "normal") {
-			force_components["hydro"] = ForceComponent(np, rate_proportional, !torque, &System::setHydroForceToParticle_squeeze);
+			force_components["hydro"] = ForceComponent(np, RateDependence::proportional, !torque, &System::setHydroForceToParticle_squeeze);
 		}
 		if (p.lubrication_model == "tangential") {
-			force_components["hydro"] = ForceComponent(np, rate_proportional, torque, &System::setHydroForceToParticle_squeeze_tangential);
+			force_components["hydro"] = ForceComponent(np, RateDependence::proportional, torque, &System::setHydroForceToParticle_squeeze_tangential);
 		}
 	}
 	if (repulsiveforce) {
-		force_components["repulsion"] = ForceComponent(np, rate_independent, !torque, &System::setRepulsiveForceToParticle);
+		force_components["repulsion"] = ForceComponent(np, RateDependence::independent, !torque, &System::setRepulsiveForceToParticle);
 	}
 	if (brownian) {
-		force_components["brownian"] = ForceComponent(np, rate_dependent, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
+		force_components["brownian"] = ForceComponent(np, RateDependence::dependent, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
 	}
 
 	/********** Force R_FU^{mf}*(U^f-U^f_inf)  *************/
@@ -236,44 +236,44 @@ void System::declareForceComponentsViscnbControlled()
 
 	/******* Contact force, spring part ***********/
 	if (friction) {
-		force_components["contact"] = ForceComponent(np, rate_independent, torque, &System::setContactForceToParticle);
+		force_components["contact"] = ForceComponent(np, RateDependence::independent, torque, &System::setContactForceToParticle);
 	} else {
-		force_components["contact"] = ForceComponent(np, rate_independent, !torque, &System::setContactForceToParticle);
+		force_components["contact"] = ForceComponent(np, RateDependence::independent, !torque, &System::setContactForceToParticle);
 	}
 
 	/******* Contact force, dashpot part ***********/
 	// note that we keep the torque on even without friction,
 	// as there is nothing else to prevent tangential motion when in contact
 	// (apart from Stokes drag, which can be set arbitrarily small)
-	force_components["dashpot_shear"] = ForceComponent(np, rate_independent, torque, &System::setDashpotForceToParticle);
-	force_components["dashpot_zexp"] = ForceComponent(np, rate_proportional, torque, &System::setDashpotZexpForceToParticle);
+	force_components["dashpot_shear"] = ForceComponent(np, RateDependence::independent, torque, &System::setDashpotForceToParticle);
+	force_components["dashpot_zexp"] = ForceComponent(np, RateDependence::proportional, torque, &System::setDashpotZexpForceToParticle);
 
 	/*********** Hydro force, i.e.  R_FE:E_inf *****************/
 	if (!zero_shear) {
 		if (p.lubrication_model == "normal") {
-			force_components["hydro_shear"] = ForceComponent(np, rate_independent, !torque, &System::setHydroForceToParticle_squeeze);
-			force_components["hydro_zexp"] = ForceComponent(np, rate_proportional, !torque, &System::setHydroZexpForceToParticle_squeeze);
+			force_components["hydro_shear"] = ForceComponent(np, RateDependence::independent, !torque, &System::setHydroForceToParticle_squeeze);
+			force_components["hydro_zexp"] = ForceComponent(np, RateDependence::proportional, !torque, &System::setHydroZexpForceToParticle_squeeze);
 		}
 		if (p.lubrication_model == "tangential") {
-			force_components["hydro_shear"] = ForceComponent(np, rate_independent, torque, &System::setHydroForceToParticle_squeeze_tangential);
-			force_components["hydro_zexp"] = ForceComponent(np, rate_proportional, torque, &System::setHydroZexpForceToParticle_squeeze_tangential);
+			force_components["hydro_shear"] = ForceComponent(np, RateDependence::independent, torque, &System::setHydroForceToParticle_squeeze_tangential);
+			force_components["hydro_zexp"] = ForceComponent(np, RateDependence::proportional, torque, &System::setHydroZexpForceToParticle_squeeze_tangential);
 		}
 	}
 	if (repulsiveforce) {
-		force_components["repulsion"] = ForceComponent(np, rate_independent, !torque, &System::setRepulsiveForceToParticle);
+		force_components["repulsion"] = ForceComponent(np, RateDependence::independent, !torque, &System::setRepulsiveForceToParticle);
 	}
 	if (brownian) {
-		force_components["brownian"] = ForceComponent(np, rate_dependent, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
+		force_components["brownian"] = ForceComponent(np, RateDependence::dependent, torque, &System::setBrownianForceToParticle);// declared rate dependent for now
 	}
 
 	/********** Force R_FU^{mf}*(U^f-U^f_inf)  *************/
 	if (mobile_fixed) {
 		// rate proportional with walls, but this can change
 		if (p.lubrication_model != "normal") {
-			force_components["from_fixed"] = ForceComponent(np, rate_proportional, !torque, &System::setFixedParticleForceToParticle);
+			force_components["from_fixed"] = ForceComponent(np, RateDependence::proportional, !torque, &System::setFixedParticleForceToParticle);
 		}
 		if (p.lubrication_model != "tangential") {
-			force_components["from_fixed"] = ForceComponent(np, rate_proportional, torque, &System::setFixedParticleForceToParticle);
+			force_components["from_fixed"] = ForceComponent(np, RateDependence::proportional, torque, &System::setFixedParticleForceToParticle);
 		}
 	}
 }
@@ -517,7 +517,7 @@ void System::setupBrownian()
 }
 
 template<typename T>
-void System::setupGenericConfiguration(T conf, ControlVariable control_){
+void System::setupGenericConfiguration(T conf, ControlVariable::ControlVariable control_){
 	string indent = "  System::\t";
 	cout << indent << "Setting up System... " << endl;
 	np = conf.position.size();
@@ -549,19 +549,19 @@ void System::setupGenericConfiguration(T conf, ControlVariable control_){
 	setupSystemPostConfiguration();
 }
 
-void System::setupConfiguration(struct base_configuration conf, ControlVariable control_)
+void System::setupConfiguration(struct base_configuration conf, ControlVariable::ControlVariable control_)
 {
 	setupGenericConfiguration(conf, control_);
 }
 
-void System::setupConfiguration(struct fixed_velo_configuration conf, ControlVariable control_)
+void System::setupConfiguration(struct fixed_velo_configuration conf, ControlVariable::ControlVariable control_)
 {
 	p.np_fixed = conf.fixed_velocities.size();
 	setupGenericConfiguration(conf, control_);
 	setFixedVelocities(conf.fixed_velocities);
 }
 
-void System::setupConfiguration(struct circular_couette_configuration conf, ControlVariable control_)
+void System::setupConfiguration(struct circular_couette_configuration conf, ControlVariable::ControlVariable control_)
 {
 	p.np_fixed = conf.np_wall1 + conf.np_wall2;
 	np_wall1 = conf.np_wall1;
@@ -693,7 +693,7 @@ void System::timeStepBoxing()
 	 */
 	if (!zero_shear) {
 		vec3d strain_increment = 2*dot(E_infinity, {0, 0, 1})*dt;
-		if (control==viscnb) {
+		if (control==ControlVariable::viscnb) {
 			strain_increment += dot(E_infinity_zexp, {0, 0, 1})*dt;
 		}
 		pbc.apply_strain(strain_increment);
@@ -832,8 +832,8 @@ void System::checkForceBalance()
 }
 
 void System::timeEvolutionEulersMethod(bool calc_stress,
-									   double time_end,
-									   double strain_end)
+                                       double time_end,
+                                       double strain_end)
 {
 	/**
 	 \brief One full time step, Euler's method.
@@ -1837,7 +1837,7 @@ void System::setVelocityDifference()
 {
 	vec3d L = pbc.dimensions();
 	vel_difference = 2*dot(E_infinity, {0, 0, L.z});
-	if (control==viscnb) {
+	if (control==ControlVariable::viscnb) {
 		vel_difference += dot(E_infinity_zexp, {0, 0, L.z});
 	}
 }
@@ -1879,7 +1879,7 @@ void System::setImposedFlow(Sym2Tensor EhatInfty, vec3d OhatInfty)
 	omega_inf = omegahat_inf*shear_rate;
 	E_infinity = Ehat_infinity*shear_rate;
 
-	if (control==viscnb) {
+	if (control==ControlVariable::viscnb) {
 		Ehat_infinity_zexp = {0, 0, 0, 0, 0, 1};
 		E_infinity_zexp = Ehat_infinity_zexp*zexp_rate;
 	}
@@ -2147,11 +2147,11 @@ void System::setFixedParticleVelocities()
 void System::rescaleRateProportionalVelocities()
 {
 	for (auto &vc: na_velo_components) {
-		if (vc.second.rate_dependence == rate_proportional) {
-			if (control==stress) {
+		if (vc.second.rate_dependence == RateDependence::proportional) {
+			if (control == ControlVariable::stress) {
 				vc.second *= shear_rate;
 			}
-			if (control==viscnb) {
+			if (control==ControlVariable::viscnb) {
 				vc.second *= zexp_rate;
 			}
 		}
@@ -2170,7 +2170,7 @@ void System::computeVelocities(bool velocity_components)
 	stokes_solver.resetRHS();
 	resetForceComponents();
 
-	if (control==rate) {
+	if (control==ControlVariable::rate) {
 		computeUInf();
 		setFixedParticleVelocities();
 		if (velocity_components) {
@@ -2179,7 +2179,7 @@ void System::computeVelocities(bool velocity_components)
 		} else {
 			computeVelocityWithoutComponents();
 		}
-	} else if (control==stress) {
+	} else if (control == ControlVariable::stress) {
 		set_shear_rate(1);
 		computeUInf();
 		setFixedParticleVelocities();
@@ -2191,7 +2191,7 @@ void System::computeVelocities(bool velocity_components)
 		}
 		rescaleRateProportionalVelocities();
 		sumUpVelocityComponents();
-	} else if (control==viscnb) {
+	} else if (control==ControlVariable::viscnb) {
 		set_zexp_rate(1);
 		computeUInf();
 		computeUInfZexp();
@@ -2253,7 +2253,7 @@ void System::computeVelocitiesStokesDrag()
 
 void System::computeUInfZexp()
 {
-	assert(control==viscnb);
+	assert(control==ControlVariable::viscnb);
 	for (int i=0; i<np; i++) {
 		u_inf_zexp[i] = dot(E_infinity_zexp, position[i]);
 	}
@@ -2270,7 +2270,7 @@ void System::computeUInf()
 
 void System::adjustVelocityPeriodicBoundary()
 {
-	if (control!=rate) { // in rate control it is already done in computeVelocities()
+	if (control != ControlVariable::rate) { // in rate control it is already done in computeVelocities()
 		computeUInf();
 	}
 	for (int i=0; i<np; i++) {
@@ -2283,7 +2283,7 @@ void System::adjustVelocityPeriodicBoundary()
 			ang_velocity[i] += omega_inf;
 		}
 	}
-	if (control==viscnb) {
+	if (control==ControlVariable::viscnb) {
 		computeUInfZexp();
 		for (int i=0; i<np; i++) {
 			velocity[i] += u_inf_zexp[i];
