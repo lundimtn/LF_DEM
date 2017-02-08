@@ -147,7 +147,7 @@ private:
 	bool hasNeighbor(int i, int j);
 	void setVelocityDifference();
 #ifndef USE_DSFMT
-	MTRand *r_gen;
+	MTRand r_gen;
 #endif
 #ifdef USE_DSFMT
 	dsfmt_t r_gen;

@@ -502,7 +502,7 @@ void System::setupBrownian()
 	 * DEV is defined as a preprocessor option in the Makefile
 	 */
 #ifndef USE_DSFMT
-	r_gen = new MTRand(17);	cerr << " WARNING : debug mode: hard coded seed is given to the RNG " << endl;
+	r_gen.seed(17);	cerr << " WARNING : debug mode: hard coded seed is given to the RNG " << endl;
 #endif
 #ifdef USE_DSFMT
 	dsfmt_init_gen_rand(&r_gen, 17);	cerr << " WARNING : debug mode: hard coded seed is given to the RNG " << endl;
@@ -510,9 +510,6 @@ void System::setupBrownian()
 #endif
 
 #ifndef DEV
-#ifndef USE_DSFMT
-	r_gen = new MTRand;
-#endif
 #ifdef USE_DSFMT
 	dsfmt_init_gen_rand(&r_gen, wagnerhash(std::time(NULL), clock()) ) ; // hash of time and clock trick from MersenneTwister v1.0 by Richard J. Wagner
 #endif
@@ -1567,12 +1564,12 @@ void System::setBrownianForceToParticle(vector<vec3d> &force,
 	}
 	double sqrt_2_dt_amp = sqrt(2*p.brownian/dt);
 	for (unsigned int i=0; i<force.size(); i++) {
-		force[i].x = sqrt_2_dt_amp*normRand(r_gen); // \sqrt(2kT/dt) * random vector A (force and torque)
-		force[i].y = sqrt_2_dt_amp*normRand(r_gen);
-		force[i].z = sqrt_2_dt_amp*normRand(r_gen);
-		torque[i].x = sqrt_2_dt_amp*normRand(r_gen); // \sqrt(2kT/dt) * random vector A (force and torque)
-		torque[i].y = sqrt_2_dt_amp*normRand(r_gen);
-		torque[i].z = sqrt_2_dt_amp*normRand(r_gen);
+		force[i].x = sqrt_2_dt_amp*normRand(&r_gen); // \sqrt(2kT/dt) * random vector A (force and torque)
+		force[i].y = sqrt_2_dt_amp*normRand(&r_gen);
+		force[i].z = sqrt_2_dt_amp*normRand(&r_gen);
+		torque[i].x = sqrt_2_dt_amp*normRand(&r_gen); // \sqrt(2kT/dt) * random vector A (force and torque)
+		torque[i].y = sqrt_2_dt_amp*normRand(&r_gen);
+		torque[i].z = sqrt_2_dt_amp*normRand(&r_gen);
 	}
 
 	if (pairwise_resistance) {
