@@ -35,7 +35,7 @@ void Simulation::importPreSimulationData(string filename)
 }
 
 void Simulation::echoInputFiles(string in_args,
-								vector<string>& input_files)
+                                vector<string>& input_files)
 {
 	/**
 	 \brief Print the entire information needed to reproduce the simulation in Simulation::fout_input
