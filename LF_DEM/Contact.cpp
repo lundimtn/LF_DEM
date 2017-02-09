@@ -234,9 +234,10 @@ vec3d Contact::getTotalForce() const
 		*/
 	if (is_active()) {
 		return f_spring_total + dashpot.getForceOnP0(sys->velocity[p0],
-													 sys->velocity[p1],
-													 sys->ang_velocity[p0],
-													 sys->ang_velocity[p1]);
+		                                             sys->velocity[p1],
+		                                             sys->ang_velocity[p0],
+		                                             sys->ang_velocity[p1],
+		                                             sys->get_vel_difference());
 	} else {
 		return vec3d();
 	}

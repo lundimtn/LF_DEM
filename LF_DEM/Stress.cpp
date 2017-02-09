@@ -186,6 +186,15 @@ void System::calcContactXFPerParticleRateDependencies()
 	auto &rateprop_XF = stress_components["xF_contact_rateprop"].particle_stress;
 	auto &rateindep_XF = stress_components["xF_contact_rateindep"].particle_stress;
 
+	const auto L = pbc.dimensions();
+	vec3d rate_prop_vel_difference;
+	if (control == ControlVariable::viscnb) {
+		rate_prop_vel_difference = dot(E_infinity_zexp, {0, 0, L.z});
+	}
+	if (control == ControlVariable::stress) {
+		rate_prop_vel_difference = 2*dot(E_infinity, {0, 0, L.z});
+	}
+
 	for (const auto &inter: interaction) {
 		unsigned int i, j;
 		std::tie(i, j) = inter.get_par_num();
@@ -198,7 +207,8 @@ void System::calcContactXFPerParticleRateDependencies()
 			                                       inter.contact.dashpot.getForceOnP0(rateprop_vel[i],
 			                                                                          rateprop_vel[j],
 			                                                                          rateprop_ang_vel[i],
-			                                                                          rateprop_ang_vel[j]));
+			                                                                          rateprop_ang_vel[j],
+			                                                                          rate_prop_vel_difference));
 			double r_ij = radius[i] + radius[j];
 			rateprop_XF[i] += (radius[i]/r_ij)*rateprop_stress;
 			rateprop_XF[j] += (radius[j]/r_ij)*rateprop_stress;
@@ -369,6 +379,9 @@ void System::gatherStressesByRateDependencies(Sym2Tensor &rate_prop_stress,
 	if (!zero_shear && control == ControlVariable::stress) {
 		// suspending fluid viscosity
 		rate_prop_stress += 2*E_infinity/(6*M_PI);
+	}
+	if (!zero_shear && control == ControlVariable::viscnb) {
+		rate_indep_stress += 2*E_infinity/(6*M_PI);
 	}
 }
 

@@ -66,11 +66,13 @@ private:
 	//===== forces/stresses  ==========================
 	std::tuple<vec3d, vec3d, vec3d, vec3d> getRFU_Uinf(const vec3d &u_inf_p0,
 	                                                   const vec3d &u_inf_p1,
-	                                                   const vec3d &omega_inf) const;
+	                                                   const vec3d &omega_inf,
+	                                                   const vec3d &vel_difference_top_bottom) const;
 	vec3d getForceOnP0(const vec3d &vel_p0,
 	                   const vec3d &vel_p1,
 	                   const vec3d &ang_vel_p0,
-	                   const vec3d &ang_vel_p1) const;
+	                   const vec3d &ang_vel_p1,
+	                   const vec3d &vel_difference_top_bottom) const;
 	vec3d getForceOnP0_nonaffine(const vec3d &na_vel_p0,
 	                             const vec3d &na_vel_p1,
 	                             const vec3d &na_ang_vel_p0,

@@ -343,7 +343,8 @@ std::pair<struct DBlock, struct DBlock> ContactDashpot::RFU_DBlocks() const
 vec3d ContactDashpot::getForceOnP0(const vec3d &vel_p0,
                                    const vec3d &vel_p1,
                                    const vec3d &ang_vel_p0,
-                                   const vec3d &ang_vel_p1) const
+                                   const vec3d &ang_vel_p1,
+                                   const vec3d &vel_difference_top_bottom) const
 {
 	/** \brief Resistance force acting on particle p0.
 
@@ -365,7 +366,7 @@ vec3d ContactDashpot::getForceOnP0(const vec3d &vel_p0,
 	if (is_active()) {
 		vec3d vi(vel_p0);
 		vec3d vj(vel_p1);
-		vj += interaction->z_offset*sys->get_vel_difference();
+		vj += interaction->z_offset*vel_difference_top_bottom;
 		/* XAU_i */
 		vec3d force_p0 = -dot(XA[0]*vi+XA[1]*vj, nvec)*(*nvec);
 		if (tangential_coeff > 0) {
@@ -422,11 +423,12 @@ vec3d ContactDashpot::getForceOnP0_nonaffine(const vec3d &na_vel_p0,
 
 std::tuple<vec3d, vec3d, vec3d, vec3d> ContactDashpot::getRFU_Uinf(const vec3d &u_inf_p0,
                                                                    const vec3d &u_inf_p1,
-                                                                   const vec3d &omega_inf) const
+                                                                   const vec3d &omega_inf,
+                                                                   const vec3d &vel_difference_top_bottom) const
 {
 	/** \brief */
 	if (is_active()) {
-		vec3d force_p0 = getForceOnP0(u_inf_p0, u_inf_p1, omega_inf, omega_inf);
+		vec3d force_p0 = getForceOnP0(u_inf_p0, u_inf_p1, omega_inf, omega_inf, vel_difference_top_bottom);
 		vec3d torque_p0;
 		if (tangential_coeff > 0) {
 			torque_p0 = a0*cross(nvec, force_p0);

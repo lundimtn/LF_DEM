@@ -1605,10 +1605,12 @@ void System::setDashpotForceToParticle(vector<vec3d> &force,
 {
 	vec3d GEi, GEj, HEi, HEj;
 	unsigned int i, j;
+	const auto L = pbc.dimensions();
+	const auto shear_vel_difference = 2*dot(E_infinity, {0, 0, L.z});
 	for (const auto &inter: interaction) {
 		if (inter.contact.is_active() && inter.contact.dashpot.is_active()) {
 			std::tie(i, j) = inter.get_par_num();
-			std::tie(GEi, GEj, HEi, HEj) = inter.contact.dashpot.getRFU_Uinf(u_inf[i], u_inf[j], omega_inf);
+			std::tie(GEi, GEj, HEi, HEj) = inter.contact.dashpot.getRFU_Uinf(u_inf[i], u_inf[j], omega_inf, shear_vel_difference);
 			force[i] += GEi;
 			force[j] += GEj;
 			torque[i] += HEi;
@@ -1623,10 +1625,12 @@ void System::setDashpotZexpForceToParticle(vector<vec3d> &force,
 	vec3d GEi, GEj, HEi, HEj;
 	unsigned int i, j;
 	vec3d zero = {0, 0, 0};
+	const auto L = pbc.dimensions();
+	const auto zexp_vel_difference = dot(E_infinity_zexp, {0, 0, L.z});
 	for (const auto &inter: interaction) {
 		if (inter.contact.is_active() && inter.contact.dashpot.is_active()) {
 			std::tie(i, j) = inter.get_par_num();
-			std::tie(GEi, GEj, HEi, HEj) = inter.contact.dashpot.getRFU_Uinf(u_inf_zexp[i], u_inf_zexp[j], zero);
+			std::tie(GEi, GEj, HEi, HEj) = inter.contact.dashpot.getRFU_Uinf(u_inf_zexp[i], u_inf_zexp[j], zero, zexp_vel_difference);
 			force[i] += GEi;
 			force[j] += GEj;
 			torque[i] += HEi;
