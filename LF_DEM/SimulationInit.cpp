@@ -372,7 +372,7 @@ void Simulation::setupNonDimensionalization(double dimensionlessnumber,
 	if (control_var == ControlVariable::rate) {
 		input_rate = dimensionlessnumber; // @@@ Renaming is required?
 	}
-	if (control_var == ControlVariable::rate) {
+	if (control_var == ControlVariable::rate || control_var == ControlVariable::viscnb) {
 		setupNonDimensionalizationRateControlled(dimensionlessnumber, input_scale);
 	} else if (control_var == ControlVariable::stress) {
 		setupNonDimensionalizationStressControlled(dimensionlessnumber, input_scale);

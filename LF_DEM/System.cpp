@@ -522,8 +522,13 @@ void System::setupGenericConfiguration(T conf, ControlVariable::ControlVariable 
 	cout << indent << "Setting up System... " << endl;
 	np = conf.position.size();
 	np_mobile = np - p.np_fixed;
-	twodimension = conf.ly == 0;
 	control = control_;
+	pbc.init({conf.lx,conf.ly,conf.lz},
+	         conf.lees_edwards_disp,
+	         p.keep_input_strain);
+
+	twodimension = conf.ly == 0;
+
 	setupParameters();
 	// Memory
 	allocateRessources();
@@ -541,9 +546,7 @@ void System::setupGenericConfiguration(T conf, ControlVariable::ControlVariable 
 		angle_output = true;
 	}
 	cout << indent << "Setting up System... [ok]" << endl;
- 	pbc.init({conf.lx,conf.ly,conf.lz},
-	          conf.lees_edwards_disp,
-	          p.keep_input_strain);
+
 	setConfiguration(conf.position, conf.radius);
 	setContacts(conf.contact_states);
 	setupSystemPostConfiguration();
@@ -1187,7 +1190,8 @@ void System::createNewInteraction(int i, int j, double scaled_interaction_range)
 
 bool System::hasNeighbor(int i, int j)
 {
-	for (int k : interaction_partners[i]) {
+	const auto &partners = interaction_partners[i];
+	for (int k : partners) {
 		if (j == k) {
 			return true;
 		}

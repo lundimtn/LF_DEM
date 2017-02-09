@@ -60,6 +60,8 @@ void BoxSet::init(double interaction_dist,
 
 void BoxSet::buildProbingPositions()
 {
+	top_probing_positions.clear();
+	bottom_probing_positions.clear();
 	int m1p1[] = {-1, 1};
 	for (int a : m1p1) {
 		for (int b : m1p1) {
