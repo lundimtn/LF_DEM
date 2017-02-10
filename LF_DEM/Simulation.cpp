@@ -660,6 +660,9 @@ void Simulation::outputData()
 		outdata.entryData("force top wall", "force", 3, sys.force_upwall);
 		outdata.entryData("force bottom wall", "force", 3, sys.force_downwall);
 	}
+	if (p.impose_sigma_zz) {
+		outdata.entryData("volume fraction", "none", 1, sys.getVolumeFraction());
+	}
 	outdata.writeToFile();
 	/****************************   Stress Tensor Output *****************/
 	outdata_st.setDimensionlessNumber(force_ratios[dimless_nb_label]);

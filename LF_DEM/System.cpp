@@ -323,9 +323,37 @@ void System::setConfiguration(const vector <vec3d>& initial_positions,
 		radius[i] = radii[i];
 	}
 	radius_wall_particle = radius[np-1];
-	setSystemVolume();
+}
 
-	particle_volume = 0;
+double System::getHeight()
+{
+	vec3d L = pbc.dimensions();
+	double system_height;
+	if (z_top == -1) {
+		system_height = L.z;
+	} else {
+		/* wall particles are at z = z_bot - a and z_top + a
+		 */
+		system_height = z_top-z_bot;
+	}
+	return system_height;
+}
+
+double System::getVolume()
+{
+	double system_volume;
+	vec3d L = pbc.dimensions();
+	if (twodimension) {
+		system_volume = L.x*getHeight();
+	} else {
+		system_volume = L.x*L.y*getHeight();
+	}
+	return system_volume;
+}
+
+double System::getVolumeFraction()
+{
+	double particle_volume = 0;
 	if (twodimension) {
 		for(auto r: radius) {
 			particle_volume += r*r;
@@ -337,6 +365,8 @@ void System::setConfiguration(const vector <vec3d>& initial_positions,
 		}
 		particle_volume *= 4*M_PI/3.;
 	}
+
+	return particle_volume/getVolume();
 }
 
 void System::setFixedVelocities(const vector <vec3d>& vel)
@@ -676,7 +706,7 @@ struct base_configuration System::getConfiguration()
 	c.lx = L.x;
 	c.ly = L.y;
 	c.lz = L.z;
-	c.volume_or_area_fraction = particle_volume/system_volume;
+	c.volume_or_area_fraction = getVolumeFraction();
 
 	c.position = position;
 	c.radius = radius;
@@ -2074,7 +2104,7 @@ void System::tmpMixedProblemSetVelocities()
 		}
 	} else if (p.simulation_mode == 41) {
 		int i_np_wall1 = np_mobile+np_wall1;
-		double wall_velocity = shear_rate*system_height;
+		double wall_velocity = shear_rate*getHeight();
 		for (int i=np_mobile; i<i_np_wall1; i++) {
 			na_velocity[i] = {-wall_velocity/2, 0, 0};
 			na_ang_velocity[i].reset();
@@ -2085,7 +2115,7 @@ void System::tmpMixedProblemSetVelocities()
 		}
 	} else if (p.simulation_mode == 42) {
 		int i_np_wall1 = np_mobile+np_wall1;
-		double wall_velocity = shear_rate*system_height;
+		double wall_velocity = shear_rate*getHeight();
 		for (int i=np_mobile; i<i_np_wall1; i++) {
 			na_velocity[i].reset();
 			na_ang_velocity[i].reset();
@@ -2338,26 +2368,6 @@ void System::displacement(int i, const vec3d& dr)
 	boxset.box(i, position[i]);
 }
 
-
-void System::setSystemVolume()
-{
-	vec3d L = pbc.dimensions();
-	string indent = "  System::\t";
-	if (z_top == -1) {
-		system_height = L.z;
-	} else {
-		/* wall particles are at z = z_bot - a and z_top + a
-		 */
-		system_height = z_top-z_bot;
-	}
-	if (twodimension) {
-		system_volume = L.x*system_height;
-		cout << indent << "lx = " << L.x << " lz = " << L.z << " system_height = " << system_height << endl;
-	} else {
-		system_volume = L.x*L.y*system_height;
-		cout << indent << "lx = " << L.x << " lz = " << L.z << " ly = " << L.y << endl;
-	}
-}
 
 void System::adjustContactModelParameters()
 {

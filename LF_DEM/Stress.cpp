@@ -373,6 +373,7 @@ void System::gatherStressesByRateDependencies(Sym2Tensor &rate_prop_stress,
 			rate_prop_stress += sc.second.getTotalStress();
 		}
 	}
+	double system_volume = getVolume();
 	rate_prop_stress /= system_volume;
 	rate_indep_stress /= system_volume;
 
@@ -394,6 +395,7 @@ void System::calcStress()
 		auto &group = sc.second.group;
 		total_stress_groups[group] += sc.second.getTotalStress();
 	}
+	double system_volume = getVolume();
 	for (auto &sc: total_stress_groups) {
 		sc.second /= system_volume;
 	}

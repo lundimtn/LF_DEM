@@ -78,8 +78,6 @@ private:
 	Sym2Tensor E_infinity_zexp;
 	std::vector <vec3d> u_inf_zexp;
 
-	double particle_volume;
-
 	std::vector <vec3d> na_disp;
 
 	/* data */
@@ -181,6 +179,8 @@ private:
 	void setupParametersLubrication();
 	void setupParametersIntegrator();
 	void setupSystemPostConfiguration();
+	double getVolume();
+	double getHeight();
 
  protected:
  public:
@@ -205,7 +205,6 @@ private:
 	bool wall_rheology;
 	bool mobile_fixed;
 	bool couette_stress;
-	double system_height;
 	bool in_predictor;
 	bool in_corrector;
 	std::vector<vec3d> position;
@@ -280,7 +279,6 @@ private:
 	double dt;
 	double avg_dt;
 	int avg_dt_nb;
-	double system_volume;
 
 	double max_velocity;
 	double max_sliding_velocity;
@@ -317,7 +315,8 @@ private:
 
 
 	/****************************************/
-	void setSystemVolume();
+	double getVolumeFraction();
+
 	void setConfiguration(const std::vector <vec3d>& initial_positions,
 	                      const std::vector <double>& radii);
 	void setFixedVelocities(const std::vector <vec3d>& vel);
