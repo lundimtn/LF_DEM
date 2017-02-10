@@ -75,6 +75,7 @@ private:
 	void setupOptionalSimulation(std::string indent);
 	std::vector<Sym2Tensor> getParticleStressGroup(std::string group);
 
+	Dimensional::UnitSystem units;
 public:
 	/* For DEMsystem*/
 	Simulation();
@@ -156,6 +157,9 @@ public:
 	                                                   std::string keyword,
 	                                                   std::string value_str,
 	                                                   double* value_ptr);
+	Dimensional::NewDimensionalValue str2NewDimensionalValue(Dimensional::Dimension dimension,
+	                                                         std::string value_str,
+	                                                         std::string name);
 	/*
 	 * For outputs
 	 */

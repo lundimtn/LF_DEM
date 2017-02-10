@@ -23,6 +23,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include "DimensionalValue.h"
 
 class OutputData {
 private:
@@ -31,8 +32,8 @@ private:
 	std::map <std::string, std::vector<std::string> > output_data;
 	std::vector <std::string> insert_order;
 	std::vector <std::string> output_data_name;
-	std::map <std::string, std::string> output_data_type;
-	std::map <std::string, double> converter;
+	std::map <std::string, Dimensional::Dimension> output_data_type;
+	std::map <Dimensional::Dimension, double> converter;
 	std::map <std::string, int> output_data_width;
 	std::ofstream fout;
 	int default_precision;
@@ -54,7 +55,7 @@ private:
 	}
 
 	void initCol(std::string name,
-				 std::string physical_dimension,
+				 Dimensional::Dimension physical_dimension,
 				 int width)
 	{
 		if (output_data.find(name) != output_data.end()) {
@@ -111,18 +112,18 @@ public:
 			std::cerr << "dimensionless_number (internal_force_unit/output_force_unit) = " << dimensionless_number << std::endl;
 			dimensionless_number = 1; // @@@@ To be checked.
 		}
-		converter["none"] = 1;
-		converter["viscosity"] = 6*M_PI;
-		converter["stress"] = 6*M_PI*dimensionless_number;
-		converter["force"] = dimensionless_number;
-		converter["time"] = 1/dimensionless_number;
-		converter["rate"] = dimensionless_number;
-		converter["velocity"] = dimensionless_number;
+		converter[Dimensional::none] = 1;
+		converter[Dimensional::Viscosity] = 6*M_PI;
+		converter[Dimensional::Stress] = 6*M_PI*dimensionless_number;
+		converter[Dimensional::Force] = dimensionless_number;
+		converter[Dimensional::Time] = 1/dimensionless_number;
+		converter[Dimensional::Rate] = dimensionless_number;
+		converter[Dimensional::Velocity] = dimensionless_number;
 	}
 
 	template<typename T>
 	void entryData(std::string name,
-				   std::string physical_dimension,
+				   Dimensional::Dimension physical_dimension,
 				   int width,
 				   T value,
 				   int precision=-1)

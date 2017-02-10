@@ -518,8 +518,9 @@ void Simulation::setupSimulation(string in_args,
 	}
 	setupOptionalSimulation(indent);
 	tagStrainParameters();
-	setupNonDimensionalization(dimensionlessnumber, input_scale);
+	units.setInternalUnit(Dimensional::Unit::hydro);
 
+	setupNonDimensionalization(dimensionlessnumber, input_scale);
 	assertParameterCompatibility();
 
 	if (input_files[3] != "not_given") {
@@ -619,6 +620,7 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 		p.friction_model = atoi(value.c_str());
 	} else if (keyword == "repulsion") {
 		input_values[keyword] = str2DimensionalValue("force", keyword, value, force_value_ptr[keyword]);
+		units.add(Dimensional::Unit::repulsion, str2NewDimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "cohesion") {
 		input_values[keyword] = str2DimensionalValue("force", keyword, value, force_value_ptr[keyword]);
 	} else if (keyword == "brownian") {
@@ -651,10 +653,13 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 		p.sd_coeff = atof(value.c_str());
 	} else if (keyword == "kn") {
 		input_values[keyword] = str2DimensionalValue("force", keyword, value, force_value_ptr[keyword]);
+		units.add(Dimensional::Unit::kn, str2NewDimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "kt") {
 		input_values[keyword] = str2DimensionalValue("force", keyword, value, force_value_ptr[keyword]);
+		units.add(Dimensional::Unit::kt, str2NewDimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "kr") {
 		input_values[keyword] = str2DimensionalValue("force", keyword, value, force_value_ptr[keyword]);
+		units.add(Dimensional::Unit::kr, str2NewDimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "dt") {
 		p.dt = atof(value.c_str());
 	} else if (keyword == "Pe_switch") {
@@ -734,6 +739,7 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 		p.keep_input_strain = str2bool(value);
 	} else if (keyword == "sigma_zz") {
 		input_values[keyword] = str2DimensionalValue("force", keyword, value, force_value_ptr[keyword]);
+		units.add(Dimensional::Unit::sigma_zz, str2NewDimensionalValue(Dimensional::Stress, value, keyword));
 		*(force_value_ptr[keyword]) /= 6*M_PI;
 	} else if (keyword == "impose_sigma_zz") {
 		p.impose_sigma_zz = str2bool(value);
@@ -858,7 +864,6 @@ void Simulation::setDefaultParameters(string input_scale)
 	autoSetParameters("simulation_mode", "0");
 	autoSetParameters("keep_input_strain", "false");
 	autoSetParameters("impose_sigma_zz", "false");
-	autoSetParameters("sigma_zz", "0"+input_scale);
 }
 
 
