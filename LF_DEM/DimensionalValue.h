@@ -9,13 +9,9 @@
 #include <stdexcept>
 #include <map>
 #include <assert.h>
+#include <iostream>
 
 namespace Dimensional {
-struct DimensionalValue{
-  std::string type;
-  double *value; // a pointer to the actual Param::ParameterSet member
-  std::string unit;
-};
 
 enum Dimension {
   Force,
@@ -24,6 +20,8 @@ enum Dimension {
   Stress,
   Rate,
   Velocity,
+  TimeOrStrain,
+  Strain,
   none
 };
 
@@ -42,25 +40,8 @@ enum Unit {
   sigma_zz,
   none
 };
-} // namespace Unit
 
-namespace Param {
-enum Parameter {
-  hydro,
-  repulsion,
-  brownian,
-  cohesion,
-  critical_load,
-  ft_max,
-  kn,
-  kt,
-  kr,
-  stress,
-  sigma_zz
-};
-}// namespace Param
-
-inline Unit::Unit getUnit(std::string s) {
+inline Unit getUnit(std::string s) {
   if (s=="h") {
     return Unit::hydro;
   }
@@ -97,29 +78,168 @@ inline Unit::Unit getUnit(std::string s) {
   return Unit::none;
 }
 
-struct NewDimensionalValue{
+inline std::string unit2suffix(Unit unit) {
+  if (unit==hydro) {
+    return "h";
+  }
+  if (unit==repulsion) {
+    return "r";
+  }
+  if (unit==brownian) {
+    return "b";
+  }
+  if (unit==cohesion) {
+    return "c";
+  }
+  if (unit==critical_load) {
+    return "cl";
+  }
+  if (unit==ft_max) {
+    return "ft";
+  }
+  if (unit==kn) {
+    return "kn";
+  }
+  if (unit==kt) {
+    return "kt";
+  }
+  if (unit==kr) {
+    return "kr";
+  }
+  if (unit==stress) {
+    return "s";
+  }
+  if (unit==sigma_zz) {
+    return "sz";
+  }
+  if (unit==none) {
+    return "";
+  }
+  return "";
+}
+} // namespace Unit
+
+template<typename T>
+struct DimensionalValue {
   Dimension dimension;
-  double value;
+  T value;
   Unit::Unit unit;
 };
 
+
+inline bool getSuffix(const std::string& str, std::string& value, std::string& suffix)
+{
+	size_t suffix_pos = str.find_first_of("abcdfghijklmnopqrstuvwxyz"); // omission of "e" is intended, to allow for scientific notation like "1e5h"
+	value = str.substr(0, suffix_pos);
+	if (suffix_pos != str.npos) {
+		suffix = str.substr(suffix_pos, str.length());
+		return true;
+	} else {
+		return false;
+	}
+}
+
+inline void errorNoSuffix(std::string quantity)
+{
+	std::cerr << "Error : no unit scale (suffix) provided for " << quantity << std::endl; exit(1);
+}
+
+
+inline DimensionalValue<double> str2DimensionalValue(Dimension dimension,
+                                                     std::string value_str,
+                                                     std::string name)
+{
+	DimensionalValue<double> inv;
+	inv.dimension = dimension;
+
+	std::string numeral, suffix;
+	bool caught_suffix = true;
+	caught_suffix = getSuffix(value_str, numeral, suffix);
+	if (!caught_suffix) {
+		errorNoSuffix(name);
+	}
+	inv.value = stod(numeral);
+	inv.unit = Unit::getUnit(suffix);
+
+  if (inv.dimension == TimeOrStrain) {
+    if (inv.unit == Unit::hydro) {
+      inv.dimension = Strain;
+      inv.unit = Unit::none;
+    } else {
+      inv.dimension = Time;
+    }
+  }
+	return inv;
+}
+
 class UnitSystem {
 public:
-  // void add(Param::Parameter param, NewDimensionalValue value);
-  void add(Unit::Unit unit, NewDimensionalValue value);
+  // void add(Param::Parameter param, DimensionalValue value);
+  void add(Unit::Unit unit, DimensionalValue<double> value);
   void setInternalUnit(Unit::Unit unit);
-  void expressInUnit(NewDimensionalValue &value);
-  void convertToInternalUnit(NewDimensionalValue &value);
-  void convertFromInternalUnit(NewDimensionalValue &value, Unit::Unit unit);
+  template<typename T> void convertToInternalUnit(DimensionalValue<T> &value);
+  template<typename T> void convertFromInternalUnit(DimensionalValue<T> &value, Unit::Unit unit);
+  const std::map<Unit::Unit, DimensionalValue<double>> getForceTree() {return unit_nodes;};
 private:
-  std::map<Unit::Unit, NewDimensionalValue> unit_nodes;
-  void convertToParentUnit(NewDimensionalValue &node);
+  std::map<Unit::Unit, DimensionalValue<double>> unit_nodes;
+  void convertToParentUnit(DimensionalValue<double> &node);
   void flipDependency(Unit::Unit node_name);
-  void convertUnit(NewDimensionalValue& node, Unit::Unit unit);
-  void convertUnits(NewDimensionalValue &value, const NewDimensionalValue &new_unit); // for arbitrary Dimension
+  void convertNodeUnit(DimensionalValue<double> &node, Unit::Unit unit);
+  template<typename T> void convertUnits(DimensionalValue<T> &value,
+                                         const DimensionalValue<double> &new_unit); // for arbitrary Dimension
 };
 
+template<typename T>
+void UnitSystem::convertUnits(DimensionalValue<T> &value, const DimensionalValue<double> &new_unit)
+{
+  switch (value.dimension) {
+    case none:
+      break;
+    case Force:
+      value.value *= new_unit.value;
+      break;
+    case Time:
+      value.value /= new_unit.value;
+      break;
+    case Rate:
+      value.value *= new_unit.value;
+      break;
+    case Viscosity:
+      value.value *= 6*M_PI;  // viscosity in solvent viscosity units irrespective the unit system chosen
+      break;
+    case Stress:
+      value.value *= 6*M_PI*new_unit.value;
+      break;
+    case Velocity:
+      value.value *= new_unit.value;
+      break;
+    case Strain:
+      break;
+    case TimeOrStrain:
+      throw std::runtime_error("UnitSystem::convertUnits : cannot convert units of a TimeOrStrain quantity.");
+      break;
+  }
+}
 
+template<typename T>
+void UnitSystem::convertToInternalUnit(DimensionalValue<T> &value)
+{
+  if (unit_nodes.count(value.unit) == 0) {
+    throw std::runtime_error(" UnitSystem::convertToInternalUnit : unknown unit.");
+  }
+  auto &unit_node = unit_nodes[value.unit];
+  convertUnits(value, unit_node);
+}
+
+template<typename T>
+void UnitSystem::convertFromInternalUnit(DimensionalValue<T> &value, Unit::Unit unit)
+{
+  if (unit_nodes.count(value.unit) == 0) {
+    throw std::runtime_error(" UnitSystem::convertFromInternalUnit : unknown unit.");
+  }
+  DimensionalValue<double> internal_force = {Force, 1/unit_nodes[unit].value, unit};
+  convertUnits(value, internal_force);
+}
 
 } // namespace Dimensional
 #endif // #ifndef __LF_DEM__Dimensional__

@@ -36,9 +36,7 @@ private:
 	System sys;
 	ParameterSet p_initial;
 	std::map <std::string, double> force_ratios; // pairs: (force_type_1/force_type_2, force_value_1/force_value_2)
-	std::map <std::string, std::string> unit_longname;
-	std::map <std::string, Dimensional::DimensionalValue> input_values;
-	std::map <std::string, double*> force_value_ptr;
+	std::map <std::string, Dimensional::DimensionalValue<double>> dimensional_input_params;
 	std::string header_imported_configulation[2];
 	ControlVariable::ControlVariable control_var;
 	double shear_rate_expectation;
@@ -47,8 +45,8 @@ private:
 	/*
 	 * Resultant data
 	 */
-	std::string internal_unit_scales;
-	std::string output_unit_scales;
+	Dimensional::Unit::Unit internal_units;
+	Dimensional::Unit::Unit output_units;
 	double target_stress_input;
 	double input_rate;
 	double dimensionless_rate;
@@ -81,28 +79,25 @@ public:
 	Simulation();
 	~Simulation();
 	void simulationSteadyShear(std::string in_args,
-							   std::vector<std::string>& input_files,
-							   bool binary_conf,
-							   double dimensionless_number,
-							   std::string input_scale,
-							   ControlVariable::ControlVariable control_variable,
-							   std::string simu_identifier);
+	                           std::vector<std::string>& input_files,
+	                           bool binary_conf,
+	                           ControlVariable::ControlVariable control_variable,
+	                           Dimensional::DimensionalValue<double> control_value,
+	                           std::string simu_identifier);
 	// void simulationfinedSequence(std::string seq_type, std::string in_args, std::vector<std::string> &input_files, bool binary_conf, std::string control_variable);
 
 	void simulationInverseYield(std::string in_args,
-								std::vector<std::string>& input_files,
-								bool binary_conf,
-								double dimensionless_number,
-								std::string input_scale,
-								ControlVariable::ControlVariable control_variable,
-								std::string simu_identifier);
+	                           std::vector<std::string>& input_files,
+	                           bool binary_conf,
+	                           ControlVariable::ControlVariable control_variable,
+	                           Dimensional::DimensionalValue<double> control_value,
+	                           std::string simu_identifier);
 
 	void setupSimulation(std::string in_args,
-						 std::vector<std::string>& input_files,
-						 bool binary_conf,
-						 double dimensionlessnumber,
-						 std::string input_scale,
-						 std::string simu_identifier);
+	                     std::vector<std::string>& input_files,
+	                     bool binary_conf,
+	                     Dimensional::DimensionalValue<double> control_value,
+	                     std::string simu_identifier);
 	TimeKeeper initTimeKeeper();
 	ParameterSet p;
 	bool keepRunning();
@@ -118,48 +113,29 @@ public:
 	}
 
 	void assertParameterCompatibility();
-	void setDefaultParameters(std::string input_scale);
+	void setDefaultParameters(Dimensional::DimensionalValue<double> control_value);
 	void readParameterFile(const std::string& filename_parameters);
 	void openOutputFiles(std::string simu_name);
 	std::string prepareSimulationName(bool binary_conf,
-									  const std::string& filename_import_positions,
-									  const std::string& filename_parameters,
-									  const std::string& simu_identifier,
-									  double dimensionlessnumber,
-									  const std::string& input_scale);
+	                                  const std::string& filename_import_positions,
+	                                  const std::string& filename_parameters,
+	                                  const std::string& simu_identifier,
+	                                  Dimensional::DimensionalValue<double> control_value);
 	void echoInputFiles(std::string in_args,
-						std::vector<std::string>& input_files);
+	                    std::vector<std::string>& input_files);
 	void autoSetParameters(const std::string& keyword,
-						   const std::string& value);
+	                       const std::string& value);
 	void contactForceParameter(std::string filename);
 	void contactForceParameterBrownian(std::string filename);
 	void importPreSimulationData(std::string filename);
-	void tagStrainParameters();
 	void resolveTimeOrStrainParameters();
 	std::map<std::string,std::string> getConfMetaData(const std::string &, const std::string &);
 	std::string getMetaParameter(std::map<std::string,std::string> &, std::string &, const std::string &);
 	std::string getMetaParameter(std::map<std::string,std::string> &, std::string &);
 	void exportForceAmplitudes();
 	void setLowPeclet();
-	void changeUnit(Dimensional::DimensionalValue &x, std::string new_unit);
-	void buildFullSetOfForceRatios();
-
-	void resolveUnitSystem(std::string long_unit);
-	void setUnitScaleRateControlled();
-	void setupNonDimensionalization(double dimensionlessnumber,
-									std::string input_scale);
-	void setupNonDimensionalizationRateControlled(double dimensionlessnumber,
-												  std::string input_scale);
-	void setupNonDimensionalizationStressControlled(double dimensionlessnumber,
-													std::string input_scale);
-	void catchForcesInStressUnits(const std::string &stress_unit);
-	Dimensional::DimensionalValue str2DimensionalValue(std::string type,
-	                                                   std::string keyword,
-	                                                   std::string value_str,
-	                                                   double* value_ptr);
-	Dimensional::NewDimensionalValue str2NewDimensionalValue(Dimensional::Dimension dimension,
-	                                                         std::string value_str,
-	                                                         std::string name);
+	Dimensional::Unit::Unit pickInternalUnitsRateControl();
+	void setupNonDimensionalization(Dimensional::DimensionalValue<double> control_value);
 	/*
 	 * For outputs
 	 */

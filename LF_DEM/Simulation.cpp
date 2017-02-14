@@ -21,32 +21,19 @@ using namespace std;
 Simulation::Simulation():
 sys(System(p, events)),
 shear_rate_expectation(-1),
-internal_unit_scales("hydro"),
 target_stress_input(0),
 diminish_output(false)
 {
-	unit_longname["h"] = "hydro";
-	unit_longname["r"] = "repulsion";
-	unit_longname["b"] = "brownian";
-	unit_longname["c"] = "cohesion";
-	unit_longname["cl"] = "critical_load";
-	unit_longname["ft"] = "ft_max";
-	unit_longname["kn"] = "kn";
-	unit_longname["kt"] = "kt";
-	unit_longname["kr"] = "kr";
-	unit_longname["s"] = "stress";
-	unit_longname["sz"] = "sigma_zz";
-
-	force_value_ptr["hydro"] = &dimensionless_rate; // the dimensionless hydrodynamic force is also the dimensionless shear rate
-	force_value_ptr["repulsion"] = &sys.p.repulsion;
-	force_value_ptr["critical_load"] = &sys.p.critical_load;
-	force_value_ptr["cohesion"] = &sys.p.cohesion;
-	force_value_ptr["ft_max"] = &sys.p.ft_max;
-	force_value_ptr["brownian"] = &sys.p.brownian;
-	force_value_ptr["kn"] = &sys.p.kn;
-	force_value_ptr["kt"] = &sys.p.kt;
-	force_value_ptr["kr"] = &sys.p.kr;
-	force_value_ptr["sigma_zz"] = &sys.p.sigma_zz;
+	// force_value_ptr["hydro"] = &dimensionless_rate; // the dimensionless hydrodynamic force is also the dimensionless shear rate
+	// force_value_ptr["repulsion"] = &sys.p.repulsion;
+	// force_value_ptr["critical_load"] = &sys.p.critical_load;
+	// force_value_ptr["cohesion"] = &sys.p.cohesion;
+	// force_value_ptr["ft_max"] = &sys.p.ft_max;
+	// force_value_ptr["brownian"] = &sys.p.brownian;
+	// force_value_ptr["kn"] = &sys.p.kn;
+	// force_value_ptr["kt"] = &sys.p.kt;
+	// force_value_ptr["kr"] = &sys.p.kr;
+	// force_value_ptr["sigma_zz"] = &sys.p.sigma_zz;
 	kill = false;
 };
 
@@ -276,14 +263,14 @@ void Simulation::printProgress()
 void Simulation::simulationSteadyShear(string in_args,
                                        vector<string>& input_files,
                                        bool binary_conf,
-                                       double dimensionless_number,
-                                       string input_scale,
                                        ControlVariable::ControlVariable control_variable,
+                                       Dimensional::DimensionalValue<double> control_value,
                                        string simu_identifier)
 {
 	string indent = "  Simulation::\t";
 	control_var = control_variable;
-	setupSimulation(in_args, input_files, binary_conf, dimensionless_number, input_scale, simu_identifier);
+
+	setupSimulation(in_args, input_files, binary_conf, control_value, simu_identifier);
 	time_t now;
 	time_strain_1 = 0;
 	now = time(NULL);
@@ -327,13 +314,12 @@ void Simulation::simulationSteadyShear(string in_args,
 void Simulation::simulationInverseYield(string in_args,
                                         vector<string>& input_files,
                                         bool binary_conf,
-                                        double dimensionless_number,
-                                        string input_scale,
                                         ControlVariable::ControlVariable control_variable,
+                                        Dimensional::DimensionalValue<double> control_value,
                                         string simu_identifier)
 {
 	control_var = control_variable;
-	setupSimulation(in_args, input_files, binary_conf, dimensionless_number, input_scale, simu_identifier);
+	setupSimulation(in_args, input_files, binary_conf, control_value, simu_identifier);
 
 	int jammed = 0;
 	time_t now;
@@ -349,9 +335,9 @@ void Simulation::simulationInverseYield(string in_args,
 
 	TimeKeeper tk;
 	tk.addClock("data", LinearClock(p.time_interval_output_data,
-	                                input_values["time_interval_output_data"].unit == "strain"));
+	                                dimensional_input_params["time_interval_output_data"].dimension == Dimensional::Strain));
 	tk.addClock("config", LinearClock(p.time_interval_output_config,
-	                                  input_values["time_interval_output_config"].unit == "strain"));
+	                                  dimensional_input_params["time_interval_output_config"].dimension == Dimensional::Strain));
 	int binconf_counter = 0;
 	while (keepRunning()) {
 		pair<double, string> t = tk.nextTime();
@@ -421,47 +407,6 @@ void Simulation::outputComputationTime()
 	fout_time << timestep_end << ' ';
 	fout_time << timestep_from_1 << endl;
 }
-
-Dimensional::DimensionalValue Simulation::str2DimensionalValue(string type,
-                                                               string name,
-                                                               string value_str,
-                                                               double *value_ptr)
-{
-	Dimensional::DimensionalValue inv;
-	inv.type = type;
-	inv.value = value_ptr;
-
-	string numeral, suffix;
-	bool caught_suffix = true;
-	caught_suffix = getSuffix(value_str, numeral, suffix);
-	if (!caught_suffix) {
-		errorNoSuffix(name);
-	}
-	suffix = unit_longname[suffix];
-	*(inv.value) = atof(numeral.c_str());
-	inv.unit = suffix;
-	return inv;
-}
-
-
-Dimensional::NewDimensionalValue Simulation::str2NewDimensionalValue(Dimensional::Dimension dimension,
-                                                                     string value_str,
-                                                                     string name)
-{
-	Dimensional::NewDimensionalValue inv;
-	inv.dimension = dimension;
-
-	string numeral, suffix;
-	bool caught_suffix = true;
-	caught_suffix = getSuffix(value_str, numeral, suffix);
-	if (!caught_suffix) {
-		errorNoSuffix(name);
-	}
-	inv.value = stod(numeral);
-	inv.unit = Dimensional::getUnit(suffix);
-	return inv;
-}
-
 
 void Simulation::outputConfigurationBinary()
 {
@@ -602,15 +547,7 @@ void Simulation::outputData()
 	 and made more consistent in the future.
 	 */
 
-	string dimless_nb_label = internal_unit_scales+"/"+output_unit_scales;
-	if (force_ratios.find(dimless_nb_label) == force_ratios.end()) {
-		ostringstream error_str;
-		error_str << " Error : don't manage to convert from \"" << internal_unit_scales << "\" units to \"" << output_unit_scales << "\" units to output data." << endl;
-		throw runtime_error(error_str.str());
-	}
-	outdata.setDimensionlessNumber(force_ratios[dimless_nb_label]);
-
-	outdata.setUnit(output_unit_scales);
+	outdata.setUnits(units, output_units);
 	double sr = sys.get_shear_rate();
 	double shear_stress = doubledot(sys.total_stress, sys.getEinfty()/sr);
 	outdata.entryData("time", Dimensional::Time, 1, sys.get_time());
@@ -684,8 +621,7 @@ void Simulation::outputData()
 	}
 	outdata.writeToFile();
 	/****************************   Stress Tensor Output *****************/
-	outdata_st.setDimensionlessNumber(force_ratios[dimless_nb_label]);
-	outdata_st.setUnit(output_unit_scales);
+	outdata_st.setUnits(units, output_units);
 	outdata_st.entryData("time", Dimensional::Time, 1, sys.get_time());
 	outdata_st.entryData("cumulated strain", Dimensional::none, 1, sys.get_cumulated_strain());
 	outdata_st.entryData("shear rate", Dimensional::Rate, 1, sys.get_shear_rate());
@@ -697,8 +633,7 @@ void Simulation::outputData()
 	outdata_st.writeToFile();
 
 	if (!p.out_particle_stress.empty()) {
-		outdata_pst.setDimensionlessNumber(force_ratios[dimless_nb_label]);
-		outdata_pst.setUnit(output_unit_scales);
+		outdata_pst.setUnits(units, output_units);
 
 		map<string, string> group_shorts;
 		group_shorts["l"] = "hydro";
@@ -803,15 +738,7 @@ void Simulation::outputParFileTxt()
 		}
 	}
 
-	string dimless_nb_label = internal_unit_scales+"/"+output_unit_scales;
-	if (force_ratios.find(dimless_nb_label) == force_ratios.end()) {
-		ostringstream error_str;
-		error_str << " Error : don't manage to convert from \"" << internal_unit_scales << "\" units to \"" << output_unit_scales << "\" units to output data." << endl;
-		throw runtime_error(error_str.str());
-	}
-	cout << "   out config: " << sys.get_cumulated_strain() << endl;
-	outdata_par.setDimensionlessNumber(force_ratios[dimless_nb_label]);
-	outdata_par.setUnit(output_unit_scales);
+	outdata_par.setUnits(units, output_units);
 	auto na_disp = sys.getNonAffineDisp();
 	for (int i=0; i<sys.get_np(); i++) {
 		outdata_par.entryData("particle index", Dimensional::none, 1, i);
@@ -849,10 +776,7 @@ void Simulation::outputParFileTxt()
 
 void Simulation::outputIntFileTxt()
 {
-	string dimless_nb_label = internal_unit_scales+"/"+output_unit_scales;
-
-	outdata_int.setDimensionlessNumber(force_ratios[dimless_nb_label]);
-	outdata_int.setUnit(output_unit_scales);
+	outdata_int.setUnits(units, output_units);
 	stringstream snapshot_header;
 	getSnapshotHeader(snapshot_header);
 	double sr = sys.get_shear_rate();

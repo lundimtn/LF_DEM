@@ -29,8 +29,6 @@ int main(int argc, char **argv)
 	Configuration_File Parameter_File \
 	\n\n OR \n\n(2) Generate initial configuration\n $ LF_DEM -g Random_Seed [-M]\n";
 
-	double dimensionless_number = 0;
-	string numeral, suffix;
 
 	int generate_init = 0;
 	string type_init_config = "normal";
@@ -46,6 +44,8 @@ int main(int argc, char **argv)
 	string stress_rate_filename = "not_given";
 	string seq_filename = "not_given";
 	string seq_type;
+
+	Dimensional::DimensionalValue<double> control_value;
 	auto rheology_control = ControlVariable::rate;
 	string simu_identifier = "";
 	const struct option longopts[] = {
@@ -71,50 +71,20 @@ int main(int argc, char **argv)
 		switch (c) {
 			case 's':
 				rheology_control = ControlVariable::stress;
-				if (getSuffix(optarg, numeral, suffix)) {
-					dimensionless_number = atof(numeral.c_str());
-					// cout << "Stress control: " << dimensionless_number << endl;
-				} else {
-					errorNoSuffix("shear stress");
-				}
-				break;
-			case 'S':
-				if (seq_filename != "not_given") { cerr << " Only one parameter sequence allowed " << endl; exit(1);};
-				rheology_control = ControlVariable::stress;
-				seq_filename = optarg;
-				seq_type = "s";
-				// cout << "Stress sequence, file " << seq_filename << endl;
+				control_value = Dimensional::str2DimensionalValue(Dimensional::Stress, optarg, "shear stress");
 				break;
 			case 't':
 				rheology_control = ControlVariable::stress;
-				if (getSuffix(optarg, numeral, suffix)) {
-					dimensionless_number = atof(numeral.c_str());
-					// cout << "Stress control: " << dimensionless_number << endl;
-				} else {
-					errorNoSuffix("shear stress");
-				}
+				control_value = Dimensional::str2DimensionalValue(Dimensional::Stress, optarg, "shear stress");
 				seq_type = "iy";
 				break;
 			case 'r':
 				rheology_control = ControlVariable::rate;
-				if (getSuffix(optarg, numeral, suffix)) {
-					dimensionless_number = atof(numeral.c_str());
-					cout << "Rate control: " << dimensionless_number << endl;
-				} else {
-					errorNoSuffix("shear rate");
-				}
-				break;
-			case 'R':
-				if (seq_filename != "not_given") { cerr << " Only one parameter sequence allowed " << endl; exit(1);};
-				rheology_control = ControlVariable::rate;
-				seq_filename = optarg;
-				seq_type = "r";
-				cout << "Rate sequence, file " << seq_filename << endl;
+				control_value = Dimensional::str2DimensionalValue(Dimensional::Force, optarg, "shear stress");
 				break;
 			case '8':
 				rheology_control = ControlVariable::rate;
-				dimensionless_number = 1;
-				suffix = "h";
+				control_value = {Dimensional::Force, 1, Dimensional::Unit::hydro};
 				cout << "Rate control, infinite shear rate (hydro + hard contacts only)" << endl;
 				break;
 			case 'k':
@@ -191,20 +161,16 @@ int main(int argc, char **argv)
 
 		if (seq_type == "iy") {
 			simulation.simulationInverseYield(in_args.str(), input_files, binary_conf,
-											  dimensionless_number, suffix, rheology_control, simu_identifier);
+			                                  rheology_control, control_value, simu_identifier);
 
-		} else if (seq_filename == "not_given") {
+		} else {
 			try {
 				simulation.simulationSteadyShear(in_args.str(), input_files, binary_conf,
-												 dimensionless_number, suffix, rheology_control,
-												 simu_identifier);
+                                         rheology_control, control_value, simu_identifier);
 			} catch (runtime_error& e) {
 				cerr << e.what() << endl;
 				return 1;
 			}
-		} else {
-			cerr << " User def sequence temporarily disabled " << endl;
-			//		  simulation.simulationUserDefinedSequence(seq_type, in_args.str(), input_files, binary_conf, rheology_control);
 		}
 	}
 	return 0;
