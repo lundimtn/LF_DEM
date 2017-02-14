@@ -242,47 +242,9 @@ void Simulation::resolveTimeOrStrainParameters()
 	}
 }
 
-void Simulation::setupSimulation(string in_args,
-                                 vector<string>& input_files,
-                                 bool binary_conf,
-                                 Dimensional::DimensionalValue<double> control_value,
-                                 string simu_identifier)
+void Simulation::setConfiguration(bool binary_conf,
+                                  string filename_import_positions)
 {
-	/**
-	 \brief Set up the simulation.
-
-		This function is intended to be generically used to set up the simulation. It processes the input parameters, non-dimensionalizes the system and starts up a System class with the relevant parameters.
-	 */
-	string indent = "  Simulation::\t";
-	cout << indent << "Simulation setup starting... " << endl;
-	string filename_import_positions = input_files[0];
-	string filename_parameters = input_files[1];
-
-	if (filename_parameters.find("init_relax", 0) != string::npos) {
-		cout << "init_relax" << endl;
-		sys.zero_shear = true;
-	} else {
-		sys.zero_shear = false;
-	}
-	setDefaultParameters(control_value);
-	readParameterFile(filename_parameters);
-	if (p.impose_sigma_zz) {
-		if (control_var == ControlVariable::stress) {
-			throw runtime_error("controlling shear and normal stresses at once not implemented yet");
-		} else {
-			control_var = ControlVariable::viscnb;
-		}
-	}
-	setupOptionalSimulation(indent);
-
-	setupNonDimensionalization(control_value);
-	assertParameterCompatibility();
-
-	if (input_files[3] != "not_given") {
-		throw runtime_error("pre-simulation data deprecated?");
-	}
-	resolveTimeOrStrainParameters();
-
 	if (binary_conf) {
 		auto format = getBinaryConfigurationFileFormat(filename_import_positions);
 		ifstream file_import;
@@ -352,6 +314,50 @@ void Simulation::setupSimulation(string in_args,
 				}
 		}
 	}
+}
+
+void Simulation::setupSimulation(string in_args,
+                                 vector<string>& input_files,
+                                 bool binary_conf,
+                                 Dimensional::DimensionalValue<double> control_value,
+                                 string simu_identifier)
+{
+	/**
+	 \brief Set up the simulation.
+
+		This function is intended to be generically used to set up the simulation. It processes the input parameters, non-dimensionalizes the system and starts up a System class with the relevant parameters.
+	 */
+	string indent = "  Simulation::\t";
+	cout << indent << "Simulation setup starting... " << endl;
+	string filename_import_positions = input_files[0];
+	string filename_parameters = input_files[1];
+
+	if (filename_parameters.find("init_relax", 0) != string::npos) {
+		cout << "init_relax" << endl;
+		sys.zero_shear = true;
+	} else {
+		sys.zero_shear = false;
+	}
+	setDefaultParameters(control_value);
+	readParameterFile(filename_parameters);
+	if (p.impose_sigma_zz) {
+		if (control_var == ControlVariable::stress) {
+			throw runtime_error("controlling shear and normal stresses at once not implemented yet");
+		} else {
+			control_var = ControlVariable::viscnb;
+		}
+	}
+	setupOptionalSimulation(indent);
+
+	setupNonDimensionalization(control_value);
+	assertParameterCompatibility();
+
+	if (input_files[3] != "not_given") {
+		throw runtime_error("pre-simulation data deprecated?");
+	}
+	resolveTimeOrStrainParameters();
+
+	setConfiguration(binary_conf, filename_import_positions);
 
 	p_initial = p;
 	simu_name = prepareSimulationName(binary_conf, filename_import_positions, filename_parameters,

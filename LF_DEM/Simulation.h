@@ -72,6 +72,7 @@ private:
 
 	void setupOptionalSimulation(std::string indent);
 	std::vector<Sym2Tensor> getParticleStressGroup(std::string group);
+	void setConfiguration(bool binary_conf, std::string filename_import_positions);
 
 	Dimensional::UnitSystem units;
 public:
