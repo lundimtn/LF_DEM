@@ -199,7 +199,7 @@ void Simulation::assertParameterCompatibility()
 	}
 }
 
-void Simulation::resolveTimeOrStrainParameters()
+void Simulation::resolveTimeOrStrainParameters(const map<string, Dimensional::DimensionalValue<double>> &dim_params)
 {
 	/**
 		\brief Interpret time units.
@@ -228,15 +228,15 @@ void Simulation::resolveTimeOrStrainParameters()
 		We have to do this not only for time_end, but also for every time defined
 		in the parameters.
 	 */
-	if (dimensional_input_params["time_end"].dimension == Dimensional::Strain) {
+	if (dim_params.at("time_end").dimension == Dimensional::Strain) {
 		time_end = -1;
-		strain_end = p.time_end;
+		strain_end = dim_params.at("time_end").value;
 	} else {
-		time_end = p.time_end;
+		time_end = dim_params.at("time_end").value;
 	}
 	if (p.log_time_interval) {
-		if (dimensional_input_params["time_end"].dimension != dimensional_input_params["initial_log_time"].dimension &&
-			(dimensional_input_params["time_end"].dimension == Dimensional::Strain || dimensional_input_params["initial_log_time"].dimension == Dimensional::Strain)) {
+		if (dim_params.at("time_end").dimension != dim_params.at("initial_log_time").dimension &&
+			(dim_params.at("time_end").dimension == Dimensional::Strain || dim_params.at("initial_log_time").dimension == Dimensional::Strain)) {
 			throw runtime_error(" If one of time_end or initial_log_time is a strain (\"h\" unit), than both must be.\n");
 		}
 	}
@@ -355,7 +355,8 @@ void Simulation::setupSimulation(string in_args,
 	if (input_files[3] != "not_given") {
 		throw runtime_error("pre-simulation data deprecated?");
 	}
-	resolveTimeOrStrainParameters();
+	resolveTimeOrStrainParameters(dimensional_input_params);
+	setFromMap(p, dimensional_input_params);
 
 	setConfiguration(binary_conf, filename_import_positions);
 
@@ -382,11 +383,11 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 	} else if (keyword == "repulsion") {
 		units.add(Dimensional::Unit::repulsion, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "cohesion") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword);
+		units.add(Dimensional::Unit::cohesion, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "brownian") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword);
+		units.add(Dimensional::Unit::brownian, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "critical_load") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword);
+		units.add(Dimensional::Unit::critical_load, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "monolayer") {
 		p.monolayer = str2bool(value);
 	} else if (keyword == "repulsive_length") {
