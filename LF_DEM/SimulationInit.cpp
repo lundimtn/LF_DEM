@@ -160,13 +160,15 @@ void Simulation::setupNonDimensionalization(Dimensional::DimensionalValue<double
 		units.add(Dimensional::Unit::stress, control_value);
 		internal_units = control_value.unit;
 	}
+	output_units = control_value.unit;
+	string indent = "  Simulation::\t";
+	cout << indent << "internal units = " << Dimensional::Unit::unit2suffix(internal_units) << endl;
+	cout << indent << "output units = " << Dimensional::Unit::unit2suffix(output_units) << endl;
 	units.setInternalUnit(internal_units);
 	exportForceAmplitudes();
-	string indent = "  Simulation::\t";
-	cout << indent << "internal units = " << internal_units << endl;
-	// Dimensional::Unit::Unit output_units = control_value.unit;
-	// sys.ratio_unit_time = units.getForceTree()[output_units].value;
-	output_units = control_value.unit;
+	for (auto dimval: dimensional_input_params) {
+		units.convertToInternalUnit(dimval.second);
+	}
 }
 
 void Simulation::assertParameterCompatibility()
