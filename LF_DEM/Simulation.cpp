@@ -24,16 +24,6 @@ shear_rate_expectation(-1),
 target_stress_input(0),
 diminish_output(false)
 {
-	// force_value_ptr["hydro"] = &dimensionless_rate; // the dimensionless hydrodynamic force is also the dimensionless shear rate
-	// force_value_ptr["repulsion"] = &sys.p.repulsion;
-	// force_value_ptr["critical_load"] = &sys.p.critical_load;
-	// force_value_ptr["cohesion"] = &sys.p.cohesion;
-	// force_value_ptr["ft_max"] = &sys.p.ft_max;
-	// force_value_ptr["brownian"] = &sys.p.brownian;
-	// force_value_ptr["kn"] = &sys.p.kn;
-	// force_value_ptr["kt"] = &sys.p.kt;
-	// force_value_ptr["kr"] = &sys.p.kr;
-	// force_value_ptr["sigma_zz"] = &sys.p.sigma_zz;
 	kill = false;
 };
 
@@ -133,12 +123,12 @@ void Simulation::handleEvents()
 void Simulation::generateOutput(const set<string> &output_events, int& binconf_counter)
 {
 	outputConfigurationBinary(); // generic, for recovery if crash
-	if (output_events.find("data") != output_events.end()) {
+	if (output_events.count("data") > 0) {
 		sys.calcStress();
 		outputData();
 	}
 
-	if (output_events.find("config") != output_events.end()) {
+	if (output_events.count("config") > 0) {
 		if (p.out_binary_conf) {
 			string binconf_filename = "conf_" + simu_name + "_" + to_string(++binconf_counter) + ".bin";
 			outputConfigurationBinary(binconf_filename);
