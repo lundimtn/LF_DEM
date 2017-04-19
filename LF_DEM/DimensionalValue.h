@@ -224,8 +224,8 @@ void UnitSystem::convertUnits(DimensionalValue<T> &value, const DimensionalValue
 template<typename T>
 void UnitSystem::convertToInternalUnit(DimensionalValue<T> &value)
 {
-  if (unit_nodes.count(value.unit) == 0) {
-    throw std::runtime_error(" UnitSystem::convertToInternalUnit : unknown unit.");
+  if (value.unit != Unit::none && unit_nodes.count(value.unit) == 0) {
+    throw std::runtime_error(" UnitSystem::convertToInternalUnit : unknown unit "+Unit::unit2suffix(value.unit));
   }
   auto &unit_node = unit_nodes[value.unit];
   convertUnits(value, unit_node);
@@ -234,8 +234,8 @@ void UnitSystem::convertToInternalUnit(DimensionalValue<T> &value)
 template<typename T>
 void UnitSystem::convertFromInternalUnit(DimensionalValue<T> &value, Unit::Unit unit)
 {
-  if (unit_nodes.count(value.unit) == 0) {
-    throw std::runtime_error(" UnitSystem::convertFromInternalUnit : unknown unit.");
+  if (value.unit != Unit::none && unit_nodes.count(value.unit) == 0) {
+    throw std::runtime_error(" UnitSystem::convertFromInternalUnit : unknown unit "+Unit::unit2suffix(value.unit));
   }
   DimensionalValue<double> internal_force = {Force, 1/unit_nodes[unit].value, unit};
   convertUnits(value, internal_force);
