@@ -23,7 +23,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include "DimensionalValue.h"
+#include "DimensionalQty.h"
 
 class OutputData {
 public:
@@ -86,9 +86,9 @@ inline void OutputData::entryData(std::string name,
   }
   std::ostringstream str_value;
   if (dimension != Dimensional::none) {
-    Dimensional::DimensionalValue<T> dimval = {dimension, value, internal_unit};
-    units.convertFromInternalUnit(dimval, out_unit);
-    str_value << std::setprecision(output_precision) << dimval.value;
+    Dimensional::DimensionalQty<T> qty = {dimension, value, internal_unit};
+    units.convertFromInternalUnit(qty, out_unit);
+    str_value << std::setprecision(output_precision) << qty.value;
   } else {
     str_value << std::setprecision(output_precision) << value;
   }

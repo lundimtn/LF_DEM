@@ -1,5 +1,5 @@
 //
-//  DimensionalValue.h
+//  DimensionalQty.h
 //  LF_DEM
 //
 //  Copyright (c) 2017 Romain Mari. All rights reserved.
@@ -41,7 +41,7 @@ enum Unit {
   none
 };
 
-inline Unit getUnit(std::string s) {
+inline Unit suffix2unit(std::string s) {
   if (s=="h") {
     return Unit::hydro;
   }
@@ -120,14 +120,16 @@ inline std::string unit2suffix(Unit unit) {
 } // namespace Unit
 
 template<typename T>
-struct DimensionalValue {
+struct DimensionalQty {
   Dimension dimension;
   T value;
   Unit::Unit unit;
 };
 
 
-inline bool getSuffix(const std::string& str, std::string& value, std::string& suffix)
+inline bool getSuffix(const std::string& str,
+                      std::string& value,
+                      std::string& suffix)
 {
 	size_t suffix_pos = str.find_first_of("abcdfghijklmnopqrstuvwxyz"); // omission of "e" is intended, to allow for scientific notation like "1e5h"
 	value = str.substr(0, suffix_pos);
@@ -145,11 +147,11 @@ inline void errorNoSuffix(std::string quantity)
 }
 
 
-inline DimensionalValue<double> str2DimensionalValue(Dimension dimension,
-                                                     std::string value_str,
-                                                     std::string name)
+inline DimensionalQty<double> str2DimensionalQty(Dimension dimension,
+                                                 std::string value_str,
+                                                 std::string name)
 {
-	DimensionalValue<double> inv;
+	DimensionalQty<double> inv;
 	inv.dimension = dimension;
 
 	std::string numeral, suffix;
@@ -159,7 +161,7 @@ inline DimensionalValue<double> str2DimensionalValue(Dimension dimension,
 		errorNoSuffix(name);
 	}
 	inv.value = stod(numeral);
-	inv.unit = Unit::getUnit(suffix);
+	inv.unit = Unit::suffix2unit(suffix);
 
   if (inv.dimension == TimeOrStrain) {
     if (inv.unit == Unit::hydro) {
@@ -174,24 +176,24 @@ inline DimensionalValue<double> str2DimensionalValue(Dimension dimension,
 
 class UnitSystem {
 public:
-  // void add(Param::Parameter param, DimensionalValue value);
-  void add(Unit::Unit unit, DimensionalValue<double> value);
+  // void add(Param::Parameter param, DimensionalQty value);
+  void add(Unit::Unit unit, DimensionalQty<double> quantity);
   void setInternalUnit(Unit::Unit unit);
-  template<typename T> void convertToInternalUnit(DimensionalValue<T> &value) const;
-  template<typename T> void convertFromInternalUnit(DimensionalValue<T> &value, Unit::Unit unit) const;
-  const std::map<Unit::Unit, DimensionalValue<double>> getForceTree() const {return unit_nodes;};
+  template<typename T> void convertToInternalUnit(DimensionalQty<T> &quantity) const;
+  template<typename T> void convertFromInternalUnit(DimensionalQty<T> &quantity, Unit::Unit unit) const;
+  const std::map<Unit::Unit, DimensionalQty<double>> getForceTree() const {return unit_nodes;};
   Unit::Unit getLargestUnit() const;
 private:
-  std::map<Unit::Unit, DimensionalValue<double>> unit_nodes;
-  void convertToParentUnit(DimensionalValue<double> &node);
+  std::map<Unit::Unit, DimensionalQty<double>> unit_nodes;
+  void convertToParentUnit(DimensionalQty<double> &node);
   void flipDependency(Unit::Unit node_name);
-  void convertNodeUnit(DimensionalValue<double> &node, Unit::Unit unit);
-  template<typename T> void convertUnit(DimensionalValue<T> &value,
+  void convertNodeUnit(DimensionalQty<double> &node, Unit::Unit unit);
+  template<typename T> void convertUnit(DimensionalQty<T> &quantity,
                                         Unit::Unit new_unit) const; // for arbitrary Dimension
 };
 
 template<typename T>
-void UnitSystem::convertUnit(DimensionalValue<T> &quantity, Unit::Unit new_unit) const
+void UnitSystem::convertUnit(DimensionalQty<T> &quantity, Unit::Unit new_unit) const
 {
   /**
     \brief Convert quantity to new_unit.
@@ -244,14 +246,14 @@ void UnitSystem::convertUnit(DimensionalValue<T> &quantity, Unit::Unit new_unit)
 }
 
 template<typename T>
-void UnitSystem::convertToInternalUnit(DimensionalValue<T> &quantity) const
+void UnitSystem::convertToInternalUnit(DimensionalQty<T> &quantity) const
 {
   auto internal_unit = unit_nodes.cbegin()->second.unit;
   convertUnit(quantity, internal_unit);
 }
 
 template<typename T>
-void UnitSystem::convertFromInternalUnit(DimensionalValue<T> &quantity, Unit::Unit unit) const
+void UnitSystem::convertFromInternalUnit(DimensionalQty<T> &quantity, Unit::Unit unit) const
 {
   auto internal_unit = unit_nodes.cbegin()->second.unit;
   assert(quantity.unit == internal_unit);

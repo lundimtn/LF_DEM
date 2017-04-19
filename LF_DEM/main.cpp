@@ -45,7 +45,7 @@ int main(int argc, char **argv)
 	string seq_filename = "not_given";
 	string seq_type;
 
-	Dimensional::DimensionalValue<double> control_value;
+	Dimensional::DimensionalQty<double> control_value;
 	auto rheology_control = ControlVariable::rate;
 	string simu_identifier = "";
 	const struct option longopts[] = {
@@ -71,16 +71,16 @@ int main(int argc, char **argv)
 		switch (c) {
 			case 's':
 				rheology_control = ControlVariable::stress;
-				control_value = Dimensional::str2DimensionalValue(Dimensional::Stress, optarg, "shear stress");
+				control_value = Dimensional::str2DimensionalQty(Dimensional::Stress, optarg, "shear stress");
 				break;
 			case 't':
 				rheology_control = ControlVariable::stress;
-				control_value = Dimensional::str2DimensionalValue(Dimensional::Stress, optarg, "shear stress");
+				control_value = Dimensional::str2DimensionalQty(Dimensional::Stress, optarg, "shear stress");
 				seq_type = "iy";
 				break;
 			case 'r':
 				rheology_control = ControlVariable::rate;
-				control_value = Dimensional::str2DimensionalValue(Dimensional::Force, optarg, "shear stress");
+				control_value = Dimensional::str2DimensionalQty(Dimensional::Force, optarg, "shear stress");
 				break;
 			case '8':
 				rheology_control = ControlVariable::rate;

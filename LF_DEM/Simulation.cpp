@@ -237,10 +237,10 @@ void Simulation::timeEvolutionUntilNextOutput(const TimeKeeper &tk)
 
 void Simulation::printProgress()
 {
-	Dimensional::DimensionalValue<double> current_time = {Dimensional::Time, sys.get_time(), internal_units};
+	Dimensional::DimensionalQty<double> current_time = {Dimensional::Time, sys.get_time(), internal_units};
 	units.convertFromInternalUnit(current_time, output_units);
 	if (time_end != -1) {
-		Dimensional::DimensionalValue<double> total_time = {Dimensional::Time, time_end, internal_units};
+		Dimensional::DimensionalQty<double> total_time = {Dimensional::Time, time_end, internal_units};
 		units.convertFromInternalUnit(total_time, output_units);
 		cout << "time (in " << Dimensional::Unit::unit2suffix(output_units) << " units): "\
 		 		 << current_time.value << " / " << total_time.value\
@@ -258,7 +258,7 @@ void Simulation::simulationSteadyShear(string in_args,
                                        vector<string>& input_files,
                                        bool binary_conf,
                                        ControlVariable::ControlVariable control_variable,
-                                       Dimensional::DimensionalValue<double> control_value,
+                                       Dimensional::DimensionalQty<double> control_value,
                                        string simu_identifier)
 {
 	string indent = "  Simulation::\t";
@@ -309,7 +309,7 @@ void Simulation::simulationInverseYield(string in_args,
                                         vector<string>& input_files,
                                         bool binary_conf,
                                         ControlVariable::ControlVariable control_variable,
-                                        Dimensional::DimensionalValue<double> control_value,
+                                        Dimensional::DimensionalQty<double> control_value,
                                         string simu_identifier)
 {
 	control_var = control_variable;

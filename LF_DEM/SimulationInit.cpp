@@ -112,7 +112,7 @@ void Simulation::exportForceAmplitudes()
 	}
 }
 
-void Simulation::setupNonDimensionalization(Dimensional::DimensionalValue<double> control_value){
+void Simulation::setupNonDimensionalization(Dimensional::DimensionalQty<double> control_value){
 	/**
 	 \brief Non-dimensionalize the simulation.
 
@@ -172,7 +172,7 @@ void Simulation::assertParameterCompatibility()
 	}
 }
 
-void Simulation::resolveTimeOrStrainParameters(const map<string, Dimensional::DimensionalValue<double>> &dim_params)
+void Simulation::resolveTimeOrStrainParameters(const map<string, Dimensional::DimensionalQty<double>> &dim_params)
 {
 	/**
 		\brief Interpret time units.
@@ -292,7 +292,7 @@ void Simulation::setConfiguration(bool binary_conf,
 void Simulation::setupSimulation(string in_args,
                                  vector<string>& input_files,
                                  bool binary_conf,
-                                 Dimensional::DimensionalValue<double> control_value,
+                                 Dimensional::DimensionalQty<double> control_value,
                                  string simu_identifier)
 {
 	/**
@@ -354,13 +354,13 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 	} else if (keyword == "friction_model") {
 		p.friction_model = atoi(value.c_str());
 	} else if (keyword == "repulsion") {
-		units.add(Dimensional::Unit::repulsion, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
+		units.add(Dimensional::Unit::repulsion, Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword));
 	} else if (keyword == "cohesion") {
-		units.add(Dimensional::Unit::cohesion, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
+		units.add(Dimensional::Unit::cohesion, Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword));
 	} else if (keyword == "brownian") {
-		units.add(Dimensional::Unit::brownian, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
+		units.add(Dimensional::Unit::brownian, Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword));
 	} else if (keyword == "critical_load") {
-		units.add(Dimensional::Unit::critical_load, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
+		units.add(Dimensional::Unit::critical_load, Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword));
 	} else if (keyword == "monolayer") {
 		p.monolayer = str2bool(value);
 	} else if (keyword == "repulsive_length") {
@@ -370,13 +370,13 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 	} else if (keyword == "lub_reduce_parameter") {
 		p.lub_reduce_parameter = atof(value.c_str());
 	} else if (keyword == "contact_relaxation_time") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Time, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::Time, value, keyword);
 	} else if (keyword == "contact_relaxation_time_tan"){
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Time, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::Time, value, keyword);
 	} else if (keyword == "disp_max") {
 		p.disp_max = atof(value.c_str());
 	} else if (keyword == "time_end") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::TimeOrStrain, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::TimeOrStrain, value, keyword);
 	} else if (keyword == "integration_method") {
 		p.integration_method = atoi(value.c_str());
 	} else if (keyword == "lub_max_gap") {
@@ -386,11 +386,11 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 	} else if (keyword == "sd_coeff") {
 		p.sd_coeff = atof(value.c_str());
 	} else if (keyword == "kn") {
-		units.add(Dimensional::Unit::kn, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
+		units.add(Dimensional::Unit::kn, Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword));
 	} else if (keyword == "kt") {
-		units.add(Dimensional::Unit::kt, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
+		units.add(Dimensional::Unit::kt, Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword));
 	} else if (keyword == "kr") {
-		units.add(Dimensional::Unit::kr, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
+		units.add(Dimensional::Unit::kr, Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword));
 	} else if (keyword == "dt") {
 		p.dt = atof(value.c_str());
 	} else if (keyword == "mu_static") {
@@ -400,13 +400,13 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 	} else if (keyword == "mu_rolling") {
 		p.mu_rolling = atof(value.c_str());
 	} else if (keyword == "time_interval_output_config") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::TimeOrStrain, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::TimeOrStrain, value, keyword);
 	} else if (keyword == "time_interval_output_data") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::TimeOrStrain, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::TimeOrStrain, value, keyword);
 	} else if (keyword == "log_time_interval") {
 		p.log_time_interval = str2bool(value);
 	} else if (keyword == "initial_log_time") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::TimeOrStrain, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::TimeOrStrain, value, keyword);
 	} else if (keyword == "nb_output_data_log_time") {
 		p.nb_output_data_log_time = atoi(value.c_str());
 	} else if (keyword == "nb_output_config_log_time") {
@@ -432,13 +432,13 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 	} else if (keyword == "start_adjust") {
 		p.start_adjust = atof(value.c_str());
 	} else if (keyword == "min_kn") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword);
 	} else if (keyword == "max_kn") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword);
 	} else if (keyword == "min_kt") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword);
 	} else if (keyword == "max_kt") {
-		dimensional_input_params[keyword] = Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword);
+		dimensional_input_params[keyword] = Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword);
 	} else if (keyword == "min_dt") {
 		p.min_dt = atof(value.c_str());
 	} else if (keyword == "max_dt") {
@@ -446,7 +446,7 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 	} else if (keyword == "rest_threshold") {
 		p.rest_threshold = atof(value.c_str());
 	} else if (keyword == "ft_max") {
-		units.add(Dimensional::Unit::ft_max, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
+		units.add(Dimensional::Unit::ft_max, Dimensional::str2DimensionalQty(Dimensional::Force, value, keyword));
 	} else if (keyword == "fixed_dt") {
 		p.fixed_dt = str2bool(value);
 	} else if (keyword == "theta_shear") {
@@ -467,7 +467,7 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 	} else if (keyword == "keep_input_strain") {
 		p.keep_input_strain = str2bool(value);
 	} else if (keyword == "sigma_zz") {
-		units.add(Dimensional::Unit::sigma_zz, Dimensional::str2DimensionalValue(Dimensional::Stress, value, keyword));
+		units.add(Dimensional::Unit::sigma_zz, Dimensional::str2DimensionalQty(Dimensional::Stress, value, keyword));
 	} else if (keyword == "impose_sigma_zz") {
 		p.impose_sigma_zz = str2bool(value);
 	} else {
@@ -527,7 +527,7 @@ void Simulation::readParameterFile(const string& filename_parameters)
 	return;
 }
 
-void Simulation::setDefaultParameters(Dimensional::DimensionalValue<double> control_value)
+void Simulation::setDefaultParameters(Dimensional::DimensionalQty<double> control_value)
 {
 
 	/**
@@ -643,7 +643,7 @@ string Simulation::prepareSimulationName(bool binary_conf,
                                          const string& filename_import_positions,
                                          const string& filename_parameters,
                                          const string& simu_identifier,
-                                         Dimensional::DimensionalValue<double> control_value)
+                                         Dimensional::DimensionalQty<double> control_value)
 {
 	/**
 	 \brief Determine simulation name.

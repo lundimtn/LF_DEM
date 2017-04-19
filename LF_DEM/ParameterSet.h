@@ -9,7 +9,7 @@
 #include <string>
 #include <map>
 #include <stdexcept>
-#include "DimensionalValue.h"
+#include "DimensionalQty.h"
 
 
 struct ParameterSet
@@ -153,7 +153,7 @@ struct ParameterSet
 	double sigma_zz; ///< imposed Z-normal stress [-]
 };
 
-inline void setFromKeyValue(ParameterSet &p, const std::string &key, const Dimensional::DimensionalValue<double> &dim_value)
+inline void setFromKeyValue(ParameterSet &p, const std::string &key, const Dimensional::DimensionalQty<double> &dim_value)
 {
 	double value = dim_value.value;
 	if (key == "contact_relaxation_time") {

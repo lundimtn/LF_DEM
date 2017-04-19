@@ -25,7 +25,7 @@
 #include "global.h"
 #include "System.h"
 #include "ParameterSet.h"
-#include "DimensionalValue.h"
+#include "DimensionalQty.h"
 #include "OutputData.h"
 #include "Events.h"
 #include "Timer.h"
@@ -35,7 +35,7 @@ class Simulation
 private:
 	System sys;
 	ParameterSet p_initial;
-	std::map <std::string, Dimensional::DimensionalValue<double>> dimensional_input_params;
+	std::map <std::string, Dimensional::DimensionalQty<double>> dimensional_input_params;
 	std::string header_imported_configulation[2];
 	ControlVariable::ControlVariable control_var;
 	double shear_rate_expectation;
@@ -82,7 +82,7 @@ public:
 	                           std::vector<std::string>& input_files,
 	                           bool binary_conf,
 	                           ControlVariable::ControlVariable control_variable,
-	                           Dimensional::DimensionalValue<double> control_value,
+	                           Dimensional::DimensionalQty<double> control_value,
 	                           std::string simu_identifier);
 	// void simulationfinedSequence(std::string seq_type, std::string in_args, std::vector<std::string> &input_files, bool binary_conf, std::string control_variable);
 
@@ -90,13 +90,13 @@ public:
 	                           std::vector<std::string>& input_files,
 	                           bool binary_conf,
 	                           ControlVariable::ControlVariable control_variable,
-	                           Dimensional::DimensionalValue<double> control_value,
+	                           Dimensional::DimensionalQty<double> control_value,
 	                           std::string simu_identifier);
 
 	void setupSimulation(std::string in_args,
 	                     std::vector<std::string>& input_files,
 	                     bool binary_conf,
-	                     Dimensional::DimensionalValue<double> control_value,
+	                     Dimensional::DimensionalQty<double> control_value,
 	                     std::string simu_identifier);
 	TimeKeeper initTimeKeeper();
 	ParameterSet p;
@@ -113,14 +113,14 @@ public:
 	}
 
 	void assertParameterCompatibility();
-	void setDefaultParameters(Dimensional::DimensionalValue<double> control_value);
+	void setDefaultParameters(Dimensional::DimensionalQty<double> control_value);
 	void readParameterFile(const std::string& filename_parameters);
 	void openOutputFiles(std::string simu_name);
 	std::string prepareSimulationName(bool binary_conf,
 	                                  const std::string& filename_import_positions,
 	                                  const std::string& filename_parameters,
 	                                  const std::string& simu_identifier,
-	                                  Dimensional::DimensionalValue<double> control_value);
+	                                  Dimensional::DimensionalQty<double> control_value);
 	void echoInputFiles(std::string in_args,
 	                    std::vector<std::string>& input_files);
 	void autoSetParameters(const std::string& keyword,
@@ -128,14 +128,14 @@ public:
 	void contactForceParameter(std::string filename);
 	void contactForceParameterBrownian(std::string filename);
 	void importPreSimulationData(std::string filename);
-	void resolveTimeOrStrainParameters(const std::map <std::string, Dimensional::DimensionalValue<double>> &);
+	void resolveTimeOrStrainParameters(const std::map <std::string, Dimensional::DimensionalQty<double>> &);
 	std::map<std::string,std::string> getConfMetaData(const std::string &, const std::string &);
 	std::string getMetaParameter(std::map<std::string,std::string> &, std::string &, const std::string &);
 	std::string getMetaParameter(std::map<std::string,std::string> &, std::string &);
 	void exportForceAmplitudes();
 	void setLowPeclet();
 	Dimensional::Unit::Unit pickInternalUnitsRateControl();
-	void setupNonDimensionalization(Dimensional::DimensionalValue<double> control_value);
+	void setupNonDimensionalization(Dimensional::DimensionalQty<double> control_value);
 	/*
 	 * For outputs
 	 */
