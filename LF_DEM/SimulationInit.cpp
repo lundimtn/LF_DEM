@@ -137,7 +137,7 @@ void Simulation::setupNonDimensionalization(Dimensional::DimensionalValue<double
 	cout << indent << "output units = " << Dimensional::Unit::unit2suffix(output_units) << endl;
 	units.setInternalUnit(internal_units);
 	exportForceAmplitudes();
-	for (auto dimval: dimensional_input_params) {
+	for (auto &dimval: dimensional_input_params) {
 		units.convertToInternalUnit(dimval.second);
 	}
 }
