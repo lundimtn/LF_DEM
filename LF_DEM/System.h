@@ -62,7 +62,6 @@ private:
 	bool pairwise_resistance_changed;
 	int total_num_timesteps;
 	double time_; ///< time elapsed since beginning of the time evolution.
-	double time_in_simulation_units; ///< time elapsed since beginning of the time evolution. \b note: this is measured in Simulation (output) units, not in internal System units.
 	LeesEdwards pbc;
 	vec3d shear_strain; // used only in wall_rheology and simulation_mode 31
 	double angle_wheel; // rotational angle of rotary couette geometory
@@ -311,8 +310,6 @@ private:
 	double normalstress_wall2;
 	vec3d force_upwall;
 	vec3d force_downwall;
-	double *ratio_unit_time; // to convert System time in Simulation time
-
 
 	/****************************************/
 	double getVolumeFraction();
@@ -359,11 +356,6 @@ private:
 	double calcLubricationRange(int, int);
 	void (System::*eventLookUp)();
 	void eventShearJamming();
-
-	double get_time_in_simulation_units()
-	{
-		return time_in_simulation_units;
-	}
 
 	double get_time()
 	{

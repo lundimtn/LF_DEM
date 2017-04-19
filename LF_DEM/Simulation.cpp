@@ -237,12 +237,16 @@ void Simulation::timeEvolutionUntilNextOutput(const TimeKeeper &tk)
 
 void Simulation::printProgress()
 {
+	Dimensional::DimensionalValue<double> current_time = {Dimensional::Time, sys.get_time(), internal_units};
+	units.convertFromInternalUnit(current_time, output_units);
 	if (time_end != -1) {
-		cout << "time: " << sys.get_time_in_simulation_units() << " , "\
-		     << sys.get_time() << " / " << time_end\
+		Dimensional::DimensionalValue<double> total_time = {Dimensional::Time, time_end, internal_units};
+		units.convertFromInternalUnit(total_time, output_units);
+		cout << "time (in " << Dimensional::Unit::unit2suffix(output_units) << " units): "\
+		 		 << current_time.value << " / " << total_time.value\
 		     << " , strain: " << sys.get_cumulated_strain() << endl;
 	} else {
-		cout << "time: " << sys.get_time_in_simulation_units()\
+		cout << "time: " << current_time.value
 		     << " , strain: " << sys.get_cumulated_strain() << " / " << strain_end << endl;
 	}
 }
