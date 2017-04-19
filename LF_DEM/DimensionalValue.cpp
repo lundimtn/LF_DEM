@@ -27,13 +27,15 @@ void UnitSystem::add(Unit::Unit unit, DimensionalValue<double> value)
   }
 }
 
-Unit::Unit UnitSystem::getLargestUnit()
+Unit::Unit UnitSystem::getLargestUnit() const
 {
   auto largest_unit = unit_nodes.cbegin()->first;
   double largest_value = 1;
 
-  setInternalUnit(largest_unit);
-  for (auto &node: unit_nodes) {
+  UnitSystem this_copy(*this);
+  this_copy.setInternalUnit(largest_unit);
+
+  for (const auto &node: this_copy.getForceTree()) {
     if (node.second.value > largest_value) {
       largest_value = node.second.value;
       largest_unit = node.first;

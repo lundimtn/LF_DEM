@@ -177,69 +177,86 @@ public:
   // void add(Param::Parameter param, DimensionalValue value);
   void add(Unit::Unit unit, DimensionalValue<double> value);
   void setInternalUnit(Unit::Unit unit);
-  template<typename T> void convertToInternalUnit(DimensionalValue<T> &value);
-  template<typename T> void convertFromInternalUnit(DimensionalValue<T> &value, Unit::Unit unit);
-  const std::map<Unit::Unit, DimensionalValue<double>> getForceTree() {return unit_nodes;};
-  Unit::Unit getLargestUnit();
+  template<typename T> void convertToInternalUnit(DimensionalValue<T> &value) const;
+  template<typename T> void convertFromInternalUnit(DimensionalValue<T> &value, Unit::Unit unit) const;
+  const std::map<Unit::Unit, DimensionalValue<double>> getForceTree() const {return unit_nodes;};
+  Unit::Unit getLargestUnit() const;
 private:
   std::map<Unit::Unit, DimensionalValue<double>> unit_nodes;
   void convertToParentUnit(DimensionalValue<double> &node);
   void flipDependency(Unit::Unit node_name);
   void convertNodeUnit(DimensionalValue<double> &node, Unit::Unit unit);
-  template<typename T> void convertUnits(DimensionalValue<T> &value,
-                                         const DimensionalValue<double> &new_unit); // for arbitrary Dimension
+  template<typename T> void convertUnit(DimensionalValue<T> &value,
+                                        Unit::Unit new_unit) const; // for arbitrary Dimension
 };
 
 template<typename T>
-void UnitSystem::convertUnits(DimensionalValue<T> &value, const DimensionalValue<double> &new_unit)
+void UnitSystem::convertUnit(DimensionalValue<T> &quantity, Unit::Unit new_unit) const
 {
-  switch (value.dimension) {
-    case none:
-      break;
+  /**
+    \brief Convert quantity to new_unit.
+    */
+
+  // special cases
+  if (quantity.dimension == none || quantity.dimension == Strain) {
+    return;
+  }
+  if (quantity.dimension == TimeOrStrain) {
+    throw std::runtime_error("UnitSystem::convertUnits : cannot convert units of a TimeOrStrain quantity.");
+  }
+
+  if (!unit_nodes.count(quantity.unit)) {
+    throw std::runtime_error("UnitSystem::convertUnits : cannot convert from "+unit2suffix(quantity.unit)+" unit.");
+  }
+  if (!unit_nodes.count(new_unit)) {
+    throw std::runtime_error("UnitSystem::convertUnits : cannot convert to "+unit2suffix(new_unit)+" unit.");
+  }
+
+  // value of the old force unit in new_unit
+  double force_unit_ratio = unit_nodes.at(quantity.unit).value/unit_nodes.at(new_unit).value;
+  switch (quantity.dimension) {
     case Force:
-      value.value *= new_unit.value;
+      quantity.value *= force_unit_ratio;
       break;
     case Time:
-      value.value /= new_unit.value;
+      quantity.value /= force_unit_ratio;
       break;
     case Rate:
-      value.value *= new_unit.value;
+      quantity.value *= force_unit_ratio;
       break;
     case Viscosity:
-      value.value *= 6*M_PI;  // viscosity in solvent viscosity units irrespective the unit system chosen
+      quantity.value *= 6*M_PI;  // viscosity in solvent viscosity units irrespective the unit system chosen
       break;
     case Stress:
-      value.value *= 6*M_PI*new_unit.value;
+      quantity.value *= 6*M_PI*force_unit_ratio;
       break;
     case Velocity:
-      value.value *= new_unit.value;
+      quantity.value *= force_unit_ratio;
       break;
-    case Strain:
-      break;
-    case TimeOrStrain:
-      throw std::runtime_error("UnitSystem::convertUnits : cannot convert units of a TimeOrStrain quantity.");
+    case none: case Strain: case TimeOrStrain:
+      // Keep these cases here even if unreachable code (see above if statements)
+      // in order to avoid gcc -Wswitch warnings.
+      // While default: case would achieve a similar results,
+      // it would also switch off ALL -Wswitch warnings, which is dangerous.
       break;
   }
+  quantity.unit = new_unit;
 }
 
 template<typename T>
-void UnitSystem::convertToInternalUnit(DimensionalValue<T> &value)
+void UnitSystem::convertToInternalUnit(DimensionalValue<T> &quantity) const
 {
-  if (value.unit != Unit::none && unit_nodes.count(value.unit) == 0) {
-    throw std::runtime_error(" UnitSystem::convertToInternalUnit : unknown unit "+Unit::unit2suffix(value.unit));
-  }
-  auto &unit_node = unit_nodes[value.unit];
-  convertUnits(value, unit_node);
+  auto internal_unit = unit_nodes.cbegin()->second.unit;
+  convertUnit(quantity, internal_unit);
 }
 
 template<typename T>
-void UnitSystem::convertFromInternalUnit(DimensionalValue<T> &value, Unit::Unit unit)
+void UnitSystem::convertFromInternalUnit(DimensionalValue<T> &quantity, Unit::Unit unit) const
 {
-  if (value.unit != Unit::none && unit_nodes.count(value.unit) == 0) {
-    throw std::runtime_error(" UnitSystem::convertFromInternalUnit : unknown unit "+Unit::unit2suffix(value.unit));
-  }
-  DimensionalValue<double> internal_force = {Force, 1/unit_nodes[unit].value, unit};
-  convertUnits(value, internal_force);
+  auto internal_unit = unit_nodes.cbegin()->second.unit;
+  assert(quantity.unit == internal_unit);
+
+  convertUnit(quantity, unit);
 }
 
 } // namespace Dimensional
