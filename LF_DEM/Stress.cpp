@@ -183,8 +183,8 @@ void System::calcContactXFPerParticleRateDependencies()
 	gatherVelocitiesByRateDependencies(rateprop_vel, rateprop_ang_vel,
 	                                   rateindep_vel, rateindep_ang_vel);
 
-	auto &rateprop_XF = stress_components["xF_contact_rateprop"].particle_stress;
-	auto &rateindep_XF = stress_components["xF_contact_rateindep"].particle_stress;
+	auto &rateprop_XF = stress_components.at("xF_contact_rateprop").particle_stress;
+	auto &rateindep_XF = stress_components.at("xF_contact_rateindep").particle_stress;
 
 	const auto L = pbc.dimensions();
 	vec3d rate_prop_vel_difference;
@@ -287,7 +287,7 @@ void System::calcStressPerParticle()
 		addUpInteractionStressME(stress_components["M_Ezexp_hydro"].particle_stress, E_infinity_zexp);
 	}
 	if (control == ControlVariable::rate) {
-		auto &cstress_XF = stress_components["xF_contact"].particle_stress;
+		auto &cstress_XF = stress_components.at("xF_contact").particle_stress;
 		for (auto &inter: interaction) {
 			if (inter.contact.is_active()) {
 				unsigned int i, j;
@@ -300,7 +300,7 @@ void System::calcStressPerParticle()
 	}
 
 	if (repulsiveforce) {
-		auto &rstress_XF = stress_components["xF_repulsion"].particle_stress;
+		auto &rstress_XF = stress_components.at("xF_repulsion").particle_stress;
 		for (auto &inter: interaction) {
 			unsigned int i, j;
 			std::tie(i, j) = inter.get_par_num();
@@ -309,8 +309,8 @@ void System::calcStressPerParticle()
 	}
 
 	if (brownian) {
-		auto &bstress_predictor = stress_components["GU_brownian_predictor"].particle_stress;
-		auto &bstress = stress_components["GU_brownian"].particle_stress;
+		auto &bstress_predictor = stress_components.at("brownian_predictor").particle_stress;
+		auto &bstress = stress_components.at("brownian").particle_stress;
 
 		if (in_predictor) {
 			for (unsigned int i=0; i<bstress.size(); i++) {
