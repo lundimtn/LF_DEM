@@ -180,6 +180,7 @@ public:
   template<typename T> void convertToInternalUnit(DimensionalValue<T> &value);
   template<typename T> void convertFromInternalUnit(DimensionalValue<T> &value, Unit::Unit unit);
   const std::map<Unit::Unit, DimensionalValue<double>> getForceTree() {return unit_nodes;};
+  Unit::Unit getLargestUnit();
 private:
   std::map<Unit::Unit, DimensionalValue<double>> unit_nodes;
   void convertToParentUnit(DimensionalValue<double> &node);

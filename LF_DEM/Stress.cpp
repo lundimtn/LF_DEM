@@ -408,7 +408,7 @@ void System::calcStress()
 	for (const auto &sc: total_stress_groups) {
 		total_stress += sc.second;
 	}
-	if (brownian && lowPeclet) {
+	if (brownian && brownian_dominated) {
 		// take an averaged stress instead of instantaneous
 		stress_avg.update(total_stress, get_time());
 		total_stress = stress_avg.get();

@@ -76,7 +76,7 @@ rolling_friction(false),
 repulsiveforce(false),
 cohesion(false),
 critical_load(false),
-lowPeclet(false),
+brownian_dominated(false),
 twodimension(false),
 control(ControlVariable::rate),
 zero_shear(false),
@@ -513,7 +513,7 @@ void System::setupParameters()
 	}
 
 	if (brownian) {
-		if (lowPeclet) {
+		if (brownian_dominated) {
 			double stress_avg_relaxation_parameter = 10*p.time_interval_output_data; // 0 --> no average
 			stress_avg.setRelaxationTime(stress_avg_relaxation_parameter);
 		}
@@ -994,7 +994,7 @@ void System::timeEvolutionPredictorCorrectorMethod(bool calc_stress,
 	}
 	if (calc_stress) {
 		calcStressPerParticle(); // stress compornents
-		if (wall_rheology || lowPeclet) {
+		if (wall_rheology || brownian_dominated) {
 			calcStress();
 		}
 		if (!p.out_particle_stress.empty() || couette_stress) {
@@ -1181,7 +1181,7 @@ void System::timeEvolution(double time_end, double strain_end)
 		firsttime = false;
 	}
 	bool calc_stress = false;
-	if (lowPeclet) {
+	if (brownian_dominated) {
 		calc_stress = true;
 	}
 

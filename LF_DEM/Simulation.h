@@ -35,7 +35,6 @@ class Simulation
 private:
 	System sys;
 	ParameterSet p_initial;
-	std::map <std::string, double> force_ratios; // pairs: (force_type_1/force_type_2, force_value_1/force_value_2)
 	std::map <std::string, Dimensional::DimensionalValue<double>> dimensional_input_params;
 	std::string header_imported_configulation[2];
 	ControlVariable::ControlVariable control_var;

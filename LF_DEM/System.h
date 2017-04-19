@@ -195,7 +195,7 @@ private:
 	bool repulsiveforce;
 	bool cohesion;
 	bool critical_load;
-	bool lowPeclet;
+	bool brownian_dominated;
 	bool lubrication;
 	bool pairwise_resistance;
 	// Simulation parameters

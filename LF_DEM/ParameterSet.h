@@ -143,7 +143,6 @@ struct ParameterSet
 	/*******************************************************
 	OTHER PARAMETERS
 	********************************************************/
-	double Pe_switch;                        ///< Value of Peclet below which Brownian units are used [5]
 	bool monolayer;							///< Particle movements are confined in monolayer. 3D rotations are allowed. [false]
 	double rest_threshold; ///< criteria to judge saturation of deformation, i.e. jammed state etc. [1e-4]
 	std::string event_handler;  ///< Select event handler [""]

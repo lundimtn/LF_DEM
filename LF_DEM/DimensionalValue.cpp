@@ -13,6 +13,9 @@ namespace Dimensional {
 void UnitSystem::add(Unit::Unit unit, DimensionalValue<double> value)
 {
   assert(value.dimension == Force || value.dimension == Stress);
+  if (value.value == 0) {
+    return;
+  }
   if (value.dimension==Stress) {
     value.value /= 6*M_PI; // at some point we have to get rid of this weird unit choice
   }
@@ -22,6 +25,21 @@ void UnitSystem::add(Unit::Unit unit, DimensionalValue<double> value)
   if (unit_nodes.count(parent_node_name) == 0) {
     unit_nodes[parent_node_name] = {Force, 1, parent_node_name};
   }
+}
+
+Unit::Unit UnitSystem::getLargestUnit()
+{
+  auto largest_unit = unit_nodes.cbegin()->first;
+  double largest_value = 1;
+
+  setInternalUnit(largest_unit);
+  for (auto &node: unit_nodes) {
+    if (node.second.value > largest_value) {
+      largest_value = node.second.value;
+      largest_unit = node.first;
+    }
+  }
+  return largest_unit;
 }
 
 void UnitSystem::convertToParentUnit(DimensionalValue<double> &node)

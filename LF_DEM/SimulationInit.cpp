@@ -59,35 +59,6 @@ void Simulation::echoInputFiles(string in_args,
 	fout_input.close();
 }
 
-void Simulation::setLowPeclet()
-{
-	sys.lowPeclet = true;
-	double scale_factor_SmallPe = p.Pe_switch/force_ratios["hydro/thermal"];
-	p.dt *= p.Pe_switch; // to make things continuous at Pe_switch
-}
-
-Dimensional::Unit::Unit Simulation::pickInternalUnitsRateControl()
-{
-	/**
-	 \brief Determine the best internal force scale to run the simulation (rate controlled case).
-
-		If the system is non-Brownian, the hydrodynamic force unit is taken (\b note: this will change in the future). If the system is Brownian, the Brownian force unit is selected at low Peclet (i.e., Peclet numbers smaller that ParameterSet::Pe_switch) and the hydrodynamic force unit is selected at high Peclet.
-	 */
-	units.setInternalUnit(Dimensional::Unit::hydro);
-	auto unit_tree = units.getForceTree();
-	bool is_brownian = unit_tree.count(Dimensional::Unit::brownian) > 0;
-	if (is_brownian) {
-		double inverse_Peclet = unit_tree[Dimensional::Unit::brownian].value;
-		if (inverse_Peclet < 1/p.Pe_switch && !sys.zero_shear) {
-			return Dimensional::Unit::hydro;
-		} else { // low Peclet mode
-			setLowPeclet();
-			return Dimensional::Unit::brownian;
-		}
-	} else {
-		return Dimensional::Unit::hydro;
-	}
-}
 
 void Simulation::exportForceAmplitudes()
 {
@@ -152,7 +123,10 @@ void Simulation::setupNonDimensionalization(Dimensional::DimensionalValue<double
 	}
 	if (control_var == ControlVariable::rate || control_var == ControlVariable::viscnb) {
 		units.add(Dimensional::Unit::hydro, control_value);
-		internal_units = pickInternalUnitsRateControl();
+		internal_units = units.getLargestUnit();
+		if (internal_units == Dimensional::Unit::brownian) {
+			sys.brownian_dominated = true;
+		}
 	} else if (control_var == ControlVariable::stress) {
 		units.add(Dimensional::Unit::stress, control_value);
 		internal_units = control_value.unit;
@@ -419,8 +393,6 @@ void Simulation::autoSetParameters(const string &keyword, const string &value)
 		units.add(Dimensional::Unit::kr, Dimensional::str2DimensionalValue(Dimensional::Force, value, keyword));
 	} else if (keyword == "dt") {
 		p.dt = atof(value.c_str());
-	} else if (keyword == "Pe_switch") {
-		p.Pe_switch = atof(value.c_str());
 	} else if (keyword == "mu_static") {
 		p.mu_static = atof(value.c_str());
 	} else if (keyword == "mu_dynamic") {
@@ -562,7 +534,6 @@ void Simulation::setDefaultParameters(Dimensional::DimensionalValue<double> cont
 	 \brief Set default values for ParameterSet parameters.
 	 */
 	auto input_scale = Dimensional::Unit::unit2suffix(control_value.unit);
-	autoSetParameters("Pe_switch", "5");
 	autoSetParameters("dt", "1e-4");
 	autoSetParameters("disp_max", "1e-3");
 	autoSetParameters("monolayer", "false");
