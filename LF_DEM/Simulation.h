@@ -44,8 +44,8 @@ private:
 	/*
 	 * Resultant data
 	 */
-	Dimensional::Unit::Unit internal_units;
-	Dimensional::Unit::Unit output_units;
+	Dimensional::Unit::Unit internal_unit;
+	Dimensional::Unit::Unit output_unit;
 	double target_stress_input;
 	double input_rate;
 	double dimensionless_rate;
@@ -73,7 +73,7 @@ private:
 	std::vector<Sym2Tensor> getParticleStressGroup(std::string group);
 	void setConfiguration(bool binary_conf, std::string filename_import_positions);
 
-	Dimensional::UnitSystem units;
+	Dimensional::UnitSystem system_of_units;
 public:
 	/* For DEMsystem*/
 	Simulation();

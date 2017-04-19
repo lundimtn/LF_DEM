@@ -237,13 +237,13 @@ void Simulation::timeEvolutionUntilNextOutput(const TimeKeeper &tk)
 
 void Simulation::printProgress()
 {
-	Dimensional::DimensionalQty<double> current_time = {Dimensional::Time, sys.get_time(), internal_units};
-	units.convertFromInternalUnit(current_time, output_units);
-	auto suffix = Dimensional::Unit::unit2suffix(output_units);
+	Dimensional::DimensionalQty<double> current_time = {Dimensional::Time, sys.get_time(), internal_unit};
+	system_of_units.convertFromInternalUnit(current_time, output_unit);
+	auto suffix = Dimensional::Unit::unit2suffix(output_unit);
 
 	if (time_end != -1) {
-		Dimensional::DimensionalQty<double> total_time = {Dimensional::Time, time_end, internal_units};
-		units.convertFromInternalUnit(total_time, output_units);
+		Dimensional::DimensionalQty<double> total_time = {Dimensional::Time, time_end, internal_unit};
+		system_of_units.convertFromInternalUnit(total_time, output_unit);
 		cout << "time: "\
 		 		 << current_time.value << suffix <<" / " << total_time.value << suffix\
 		     << " , strain: " << sys.get_cumulated_strain() << endl;
@@ -543,7 +543,7 @@ void Simulation::outputData()
 	 and made more consistent in the future.
 	 */
 
-	outdata.setUnits(units, output_units);
+	outdata.setUnits(system_of_units, output_unit);
 	double sr = sys.get_shear_rate();
 	double shear_stress = doubledot(sys.total_stress, sys.getEinfty()/sr);
 	outdata.entryData("time", Dimensional::Time, 1, sys.get_time());
@@ -617,7 +617,7 @@ void Simulation::outputData()
 	}
 	outdata.writeToFile();
 	/****************************   Stress Tensor Output *****************/
-	outdata_st.setUnits(units, output_units);
+	outdata_st.setUnits(system_of_units, output_unit);
 	outdata_st.entryData("time", Dimensional::Time, 1, sys.get_time());
 	outdata_st.entryData("cumulated strain", Dimensional::none, 1, sys.get_cumulated_strain());
 	outdata_st.entryData("shear rate", Dimensional::Rate, 1, sys.get_shear_rate());
@@ -629,7 +629,7 @@ void Simulation::outputData()
 	outdata_st.writeToFile();
 
 	if (!p.out_particle_stress.empty()) {
-		outdata_pst.setUnits(units, output_units);
+		outdata_pst.setUnits(system_of_units, output_unit);
 
 		map<string, string> group_shorts;
 		group_shorts["l"] = "hydro";
@@ -734,7 +734,7 @@ void Simulation::outputParFileTxt()
 		}
 	}
 
-	outdata_par.setUnits(units, output_units);
+	outdata_par.setUnits(system_of_units, output_unit);
 	auto na_disp = sys.getNonAffineDisp();
 	for (int i=0; i<sys.get_np(); i++) {
 		outdata_par.entryData("particle index", Dimensional::none, 1, i);
@@ -772,7 +772,7 @@ void Simulation::outputParFileTxt()
 
 void Simulation::outputIntFileTxt()
 {
-	outdata_int.setUnits(units, output_units);
+	outdata_int.setUnits(system_of_units, output_unit);
 	stringstream snapshot_header;
 	getSnapshotHeader(snapshot_header);
 	double sr = sys.get_shear_rate();
@@ -783,11 +783,11 @@ void Simulation::outputIntFileTxt()
 		outdata_int.entryData("particle 1 label", Dimensional::none, 1, i);
 		outdata_int.entryData("particle 2 label", Dimensional::none, 1, j);
 		outdata_int.entryData("contact state "
-							  "(0 = no contact, "
-							  "1 = frictionless contact, "
-							  "2 = non-sliding frictional, "
-							  "3 = sliding frictional)",
-							  Dimensional::none, 1, inter.contact.getFrictionState());
+		                      "(0 = no contact, "
+		                      "1 = frictionless contact, "
+		                      "2 = non-sliding frictional, "
+		                      "3 = sliding frictional)",
+		                      Dimensional::none, 1, inter.contact.getFrictionState());
 		if (diminish_output == false) {
 			outdata_int.entryData("normal vector, oriented from particle 1 to particle 2", \
 								  Dimensional::none, 3, inter.nvec);
