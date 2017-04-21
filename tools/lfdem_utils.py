@@ -1,6 +1,7 @@
 import numpy as np
 import dict_utils as du
 
+
 def periodize(x, box_lim, lees_edwards_strain, gradient_direction=2):
     """ Periodize x according to Lees-Edwards in a box with limits box_lim.
 
