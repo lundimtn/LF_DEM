@@ -7,48 +7,65 @@ def periodize(x, box_lim, lees_edwards_strain, gradient_direction=2):
 
         x is an array with shape (..., d), box_lim is an array
         with shape (d, 2) containing the min and max box coordinates
-        in each direction, and lees_edwards_strain is a vector of size d.
+        in each direction, and lees_edwards_strain is an array with shape (d,)
+        or x.shape.
 
         Note that the Lees-Edwards strain must be 0 along the
         gradient direction.
     """
-    if lees_edwards_strain[gradient_direction] != 0:
-        raise RuntimeError("lees_edwards_strain[gradient_direction] != 0")
+
+    x = np.asarray(x)
+    lees_edwards_strain = np.asarray(lees_edwards_strain)
     g = gradient_direction
+
+    if lees_edwards_strain[..., g].any():
+        raise RuntimeError("lees_edwards_strain[..., gradient_direction] != 0")
 
     box_min = np.array(box_lim[:, 0])
     box_max = np.array(box_lim[:, 1])
     box_size = box_max - box_min
 
-    lees_edwards_disp = np.array(lees_edwards_strain) * box_size[g]
+    lees_edwards_disp = lees_edwards_strain * box_size[g]
 
     # start by the gradient direction, easier
     gcrossing_shift = np.array(lees_edwards_disp)
-    gcrossing_shift[g] = box_size[g]
+    gcrossing_shift[..., g] = box_size[g]
 
     crossing = x[..., g] > box_max[g]
     while crossing.any():
-        x[crossing] -= gcrossing_shift
+        if gcrossing_shift.ndim > 1:
+            x[crossing] -= gcrossing_shift[crossing]
+        else:
+            x[crossing] -= gcrossing_shift
         crossing = x[..., g] > box_max[g]
 
     crossing = x[..., g] < box_min[g]
     while crossing.any():
-        x[crossing] += gcrossing_shift
+        if gcrossing_shift.ndim > 1:
+            x[crossing] += gcrossing_shift[crossing]
+        else:
+            x[crossing] += gcrossing_shift
         crossing = x[..., g] < box_min[g]
 
     for d in range(x.shape[-1]):
         if d != g:
-            crossing_shift = np.zeros(x.shape[-1], dtype=np.float)
-            crossing_shift[d] = box_size[d]
+            crossing_shift = np.zeros(x.shape, dtype=np.float)
+            crossing_shift[..., d] = box_size[d]
 
             crossing = x[..., d] > box_max[d]
             while crossing.any():
-                x[crossing] -= crossing_shift
+                if crossing_shift.ndim > 1:
+                    x[crossing] -= crossing_shift[crossing]
+                else:
+                    x[crossing] -= crossing_shift
                 crossing = x[..., d] > box_max[d]
 
             crossing = x[..., d] < box_min[d]
             while crossing.any():
-                x[crossing] += crossing_shift
+                if crossing_shift.ndim > 1:
+                    x[crossing] += crossing_shift[crossing]
+                else:
+                    x[crossing] += crossing_shift
                 crossing = x[..., d] < box_min[d]
 
 
