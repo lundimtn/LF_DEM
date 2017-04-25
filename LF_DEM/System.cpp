@@ -196,11 +196,6 @@ void System::declareForceComponents()
 		force_components["contact"] = ForceComponent(np, RateDependence::independent, !torque, &System::setContactForceToParticle);
 	}
 
-	/******* Contact force, dashpot part ***********/
-	// note that we keep the torque on, as there is nothing else to prevent tangential motion when in contact
-	// (apart from Stokes drag, which can be set arbitrarily small)
-	force_components["dashpot"] = ForceComponent(np, RateDependence::proportional, torque, &System::setDashpotForceToParticle);
-
 	/*********** Hydro force, i.e.  R_FE:E_inf *****************/
 	if (!zero_shear) {
 		if (p.lubrication_model == "normal") {
@@ -209,6 +204,10 @@ void System::declareForceComponents()
 		if (p.lubrication_model == "tangential") {
 			force_components["hydro"] = ForceComponent(np, RateDependence::proportional, torque, &System::setHydroForceToParticle_squeeze_tangential);
 		}
+		/******* Contact force, dashpot part, U_inf only, i.e. R_FU^{dashpot}.U_inf ***********/
+		// note that we keep the torque on, as there is nothing else to prevent tangential motion when in contact
+		// (apart from Stokes drag, which can be set arbitrarily small)
+		force_components["dashpot"] = ForceComponent(np, RateDependence::proportional, torque, &System::setDashpotForceToParticle);
 	}
 	if (repulsiveforce) {
 		force_components["repulsion"] = ForceComponent(np, RateDependence::independent, !torque, &System::setRepulsiveForceToParticle);
@@ -1305,7 +1304,7 @@ void System::declareResistance(int p0, int p1)
 	if (p1 < np_mobile) { // i and j mobile
 		nb_blocks_mm[p0]++;
 	} else if (p0 >= np_mobile) { // i and j fixed
-		nb_blocks_ff[p0]++;
+		nb_blocks_ff[p0-np_mobile]++;
 	} else {
 		nb_blocks_mf[p0]++;
 	}
@@ -1317,7 +1316,7 @@ void System::eraseResistance(int p0, int p1)
 	if (p1 < np_mobile) { // i and j mobile
 		nb_blocks_mm[p0]--;
 	} else if (p0 >= np_mobile) { // i and j fixed
-		nb_blocks_ff[p0]--;
+		nb_blocks_ff[p0-np_mobile]--;
 	} else {
 		nb_blocks_mf[p0]--;
 	}
