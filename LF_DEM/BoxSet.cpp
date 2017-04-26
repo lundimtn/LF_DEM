@@ -4,8 +4,8 @@
 using namespace std;
 
 void BoxSet::init(double interaction_dist,
-									LeesEdwards pbc,
-									unsigned int np)
+                  LeesEdwards pbc,
+                  unsigned int np)
 {
 	string indent = "	BoxSet::\t";
 	cout << indent << "Setting up Cell List System ... ";
@@ -14,12 +14,9 @@ void BoxSet::init(double interaction_dist,
 		bx = NULL;
 	}
 	auto system_dimensions = pbc.dimensions();
-	double xratio = system_dimensions.x/interaction_dist;
-	double yratio = system_dimensions.y/interaction_dist;
-	double zratio = system_dimensions.z/interaction_dist;
-	x_box_nb = (unsigned int)xratio;
-	y_box_nb = (unsigned int)yratio;
-	z_box_nb = (unsigned int)zratio;
+	x_box_nb = (unsigned int)(system_dimensions.x/interaction_dist);
+	y_box_nb = (unsigned int)(system_dimensions.y/interaction_dist);
+	z_box_nb = (unsigned int)(system_dimensions.z/interaction_dist);
 	if (x_box_nb == 0) {
 		x_box_nb = 1;
 	}
