@@ -191,6 +191,11 @@ public:
 
 /************ vec3d helping functions *******************/
 
+inline vec3d unitvector(const vec3d& v)
+{
+	return v/v.norm();
+}
+
 /*** Symmetric binary operators ***/
 inline bool operator == (const vec3d &v1,
                          const vec3d &v2)

@@ -1,43 +1,21 @@
 #include "Box.h"
 using namespace std;
 
-Box::~Box()
-{
-	static_neighbors.clear();
-	moving_neighbors.clear();
-}
 
-/* reset every moving neighbor:
- * important for top/bottom boxes, as the number of moving neighbors
- * can be smaller than _moving_neigh_nb
- */
-void Box::resetMovingNeighbors()
-{
-	moving_neighbors.clear();
-}
-
-void Box::addStaticNeighbor(Box* neigh_box)
+void Box::addNeighborBox(Box* neigh_box)
 {
 	if (neigh_box == this) {
 		return;
 	}
-	static_neighbors.push_back(neigh_box);
+	neighbors.push_back(neigh_box);
 }
 
-void Box::addMovingNeighbor(Box* neigh_box)
-{
-	if (neigh_box == this) {
-		return;
-	}
-	moving_neighbors.push_back(neigh_box);
-}
-
-void Box::add(int i)
+void Box::add(unsigned i)
 {
 	container.insert(i);
 }
 
-void Box::remove(int i)
+void Box::remove(unsigned i)
 {
 	container.erase(i);
 }
@@ -49,12 +27,7 @@ void Box::buildNeighborhoodContainer()
 	}
 	neighborhood_container.clear();
 	size_t size = container.size();
-	for (const auto& box : static_neighbors) {
-		if (box->type != 0) {
-			size += box->getContainer().size();
-		}
-	}
-	for (const auto& box : moving_neighbors) {
+	for (const auto& box : neighbors) {
 		if (box->type != 0) {
 			size += box->getContainer().size();
 		}
@@ -66,17 +39,7 @@ void Box::buildNeighborhoodContainer()
 		neighborhood_container[j] = k;
 		j++;
 	}
-	// static neighboring boxes
-	for (const auto& box : static_neighbors) {
-		if (box->type != 0) {
-			for (const int& k : box->container) {
-				neighborhood_container[j] = k;
-				j++;
-			}
-		}
-	}
-	// moving neighboring boxes
-	for (const auto& box : moving_neighbors) {
+	for (const auto& box : neighbors) {
 		if (box->type != 0) {
 			for (const int& k : box->container) {
 				neighborhood_container[j] = k;
