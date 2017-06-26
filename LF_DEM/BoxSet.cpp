@@ -40,7 +40,7 @@ void BoxSet::setupBoxes(const PBC::PeriodicBoundary &pb) {
 std::array<std::size_t, 3> BoxSet::computeBoxNumber() const
 {
 	std::array<std::size_t, 3> _box_nb;
-
+	const auto &rhomb_depths = rhomb.getDepths();
 	for(unsigned i=0; i<_box_nb.size(), i++) {
 		_box_nb[i] = (unsigned)(rhomb_depths[i]/_box_min_size);
 		if (_box_nb[i] == 0) {
@@ -53,12 +53,8 @@ std::array<std::size_t, 3> BoxSet::computeBoxNumber() const
 bool BoxSet::setPeriodicBoundaryConditions(const PBC::PeriodicBoundary &pb)
 {
 	rhomb = pb.getRhomboid();
-	rhomb_unit_normals = {unitvector(cross(rhomboid.edges[1], rhomboid.edges[2])),
-	                      unitvector(cross(rhomboid.edges[2], rhomboid.edges[0])),
-	                      unitvector(cross(rhomboid.edges[0], rhomboid.edges[1]))};
-  	rhomb_depths = {dot(rhomb.edges[0], cross(rhomb.edges[1], rhomb.edges[2]).unitvector()),
-	                dot(rhomb.edges[1], cross(rhomb.edges[2], rhomb.edges[0]).unitvector()),
-	                dot(rhomb.edges[2], cross(rhomb.edges[0], rhomb.edges[1]).unitvector())};
+	rhomb_unit_normals = rhomb.getNormals();
+
 	auto new_box_nb = computeBoxNumber();
 	for (unsigned i=0; i<new_box_nb.size(); i++) {
 		if(new_box_nb[i] != box_nb[i]) {
