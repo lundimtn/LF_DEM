@@ -58,7 +58,7 @@ void RhomboidLattice::setEdges(const std::array<vec3d, 3> &_edges)
 	min_aspect_ratio[2] = std::min(depths[2]/edges[1].norm(), depths[2]/edges[0].norm());
 	std::iota(ordering.begin(), ordering.end(), 0);
 	std::sort(ordering.begin(), ordering.end(),
-			   [&min_aspect_ratio](size_t i1, size_t i2) {return min_aspect_ratio[i1] > min_aspect_ratio[i2];});
+	          [&min_aspect_ratio](size_t i1, size_t i2) {return min_aspect_ratio[i1] > min_aspect_ratio[i2];});
 
 }
 
@@ -121,7 +121,6 @@ public:
 private:
 	double cumulated_strain_;
 	matrix strain_;
-	vec3d shear_disp;
 };
 
 
@@ -134,8 +133,8 @@ inline void LeesEdwards::init(vec3d system_dimensions,
 	assert(shear_displacement.z == 0);
 
 	std::array<vec3d, 3> edges = {{ {L.x, 0, 0},
-	{0, L.y, 0},
-	shear_displacement }};
+	                              {0, L.y, 0},
+	                              shear_displacement}};
 	box_rhomboid.setEdges(edges);
 
 	if (keep_init_strain) {
@@ -157,18 +156,14 @@ inline void LeesEdwards::applyStrain(const matrix &strain_tensor)
 	strain_ += strain_tensor;
 	cumulated_strain_ += strain_tensor.norm();
 
-	shear_disp = box_rhomboid.getEdges()[2];
-	int m = (int)(shear_disp.x/L.x);
-	if (shear_disp.x < 0) {
-		m--;
-	}
-	shear_disp.x -= m*L.x;
+	// slanting logic
 
-	m = (int)(shear_disp.y/L.y);
-	if (shear_disp.y < 0) {
-		m--;
-	}
-	shear_disp.y -= m*L.y;
+	auto edges = box_rhomboid.getEdges();
+	double slant_idx = std::trunc(edges[2].x/L.x);
+	edges[2] -= slant_idx*L.x;
+	slant_idx = std::trunc(edges[2].y/L.y);
+	edges[2] -= slant_idx*L.y;
+	box_rhomboid.setEdges(edges);
 }
 
 
