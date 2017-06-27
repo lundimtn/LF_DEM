@@ -19,7 +19,7 @@ private:
 public:
 	void setEdges(const std::array<vec3d, 3> &_edges);
 	void applyStrain(const matrix &strain_tensor);
-	std::array<double, 3> placeInPrimaryCell(vec3d& pos) const;
+	inline std::pair<bool, vec3d> placeInPrimaryCell(vec3d& pos) const;
 	vec3d primaryCellImage(const vec3d &pos) const;
 	std::array<double, 3> getNearestImage(vec3d& separation) const;
 	std::array<double, 3> getNearestImageLargeSystem(vec3d& separation) const;
@@ -63,16 +63,19 @@ void RhomboidLattice::setEdges(const std::array<vec3d, 3> &_edges)
 }
 
 
-inline std::array<double, 3> RhomboidLattice::placeInPrimaryCell(vec3d& pos) const
+inline std::pair<bool, vec3d> RhomboidLattice::placeInPrimaryCell(vec3d& pos) const
 {
-	std::array<double, 3> box_shifts;
+	bool boundary_crossing = false;
+	vec3d init_pos = pos;
 	for (unsigned i=0; i<edges.size(); i++) {
-		box_shifts[i] = std::floor(dot(side_normals[i], pos)/depths[i]);
-		pos -= box_shifts[i]*edges[i];
+		auto shift = std::floor(dot(side_normals[i], pos)/depths[i]);
+		if (shift != 0) {
+			boundary_crossing = true;
+			pos -= shift*edges[i];
+		}
 	}
-	return box_shifts;
+	return std::make_pair(boundary_crossing, init_pos - pos);
 }
-
 
 inline vec3d RhomboidLattice::primaryCellImage(const vec3d &pos) const
 {
@@ -96,22 +99,28 @@ inline std::array<double, 3> RhomboidLattice::getNearestImageLargeSystem(vec3d& 
 	return box_shifts;
 }
 
+class BoundaryCondition {
+public:
+	virtual void applyStrain(const matrix &strain_tensor) =0;
+	vec3d dimensions() const {return L;}
+	const RhomboidLattice & getLattice() const {return box_rhomboid;};
+protected:
+	vec3d L;
+	RhomboidLattice box_rhomboid;
+};
 
-class LeesEdwards { // slanted boxes, not sliding boxes, gradient along z
+class LeesEdwards : public BoundaryCondition { // slanted boxes, not sliding boxes, gradient along z
 public:
 	void init(vec3d system_dimensions,
 	          vec3d shear_displacement,
 	          bool keep_init_strain);
 	void applyStrain(const matrix &strain_tensor);
-	vec3d dimensions() const {return L;}
 	double getCumulatedStrain() const {return cumulated_strain_;};
 	matrix getStrain() const {return strain_;};
+
 private:
-	vec3d L;
-	vec3d Lhalf;
 	double cumulated_strain_;
 	matrix strain_;
-	RhomboidLattice box_rhomboid;
 	vec3d shear_disp;
 };
 
@@ -122,7 +131,6 @@ inline void LeesEdwards::init(vec3d system_dimensions,
                               bool keep_init_strain)
 {
 	L = system_dimensions;
-	Lhalf = L/2;
 	assert(shear_displacement.z == 0);
 
 	std::array<vec3d, 3> edges = {{ {L.x, 0, 0},
@@ -164,6 +172,25 @@ inline void LeesEdwards::applyStrain(const matrix &strain_tensor)
 }
 
 
+class KraynikReinelt : public BoundaryCondition {
+public:
+	void init(vec3d system_dimensions);
+	void applyStrain(const matrix &strain_tensor);
+
+private:
+};
+
+inline void KraynikReinelt::applyStrain(const matrix &strain_tensor)
+{
+	// TBD
 }
+
+inline void KraynikReinelt::init(vec3d system_dimensions)
+{
+	// TBD
+}
+
+
+} // namespace PBC
 
 #endif /* defined(__LF_DEM__LeesEdwards__) */

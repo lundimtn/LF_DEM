@@ -613,28 +613,11 @@ void System::initializeBoxing()
 			}
 		}
 	}
-	if (!ext_flow) {
-		// simple shear
-		boxset.init(max_range, this);
-		for (int i=0; i<np; i++) {
-			boxset.box(i);
-		}
-		boxset.update();
-	} else {
-		// extensional flow
-		double dl = max_range;
-		int num_x = (int)(lx/dl);
-		int num_z = (int)(lz/dl);
-		lx_ext_flow = 3*dl*(num_x+1)+2*dl;
-		ly_ext_flow = ly;
-		lz_ext_flow = 2*dl*(num_z+1)+2*dl;
-		vec3d box_origin(dl*(num_x+2), 0, dl*(num_z+2));
-		boxset.initExtFlow(max_range, box_origin, this);
-		for (int i=0; i<np; i++) {
-			boxset.box(i);
-		}
-		boxset.updateExtFlow();
+	boxset.init(max_range, pbc->getLattice(), np);
+	for (int i=0; i<np; i++) {
+		boxset.box(i, position[i]);
 	}
+	boxset.update();
 }
 
 struct base_configuration System::getConfiguration()
@@ -687,13 +670,7 @@ void System::timeStepBoxing()
 			angle_wheel += dt*(omega_wheel_in-omega_wheel_out);
 		}
 	}
-	if (!ext_flow) {
-		/**** simple shear flow ****/
-		boxset.update();
-	} else {
-		/**** extensional flow ****/
-		boxset.updateExtFlow();
-	}
+	boxset.update();
 }
 
 void System::eventShearJamming()
@@ -1039,9 +1016,9 @@ void System::retrimProcess()
 	strain_retrim += strain_retrim_interval;
 	for (int i=0; i<np; i++) {
 		retrim(position[i]);
-		boxset.box(i);
+		boxset.box(i, position[i]);
 	}
-	boxset.updateExtFlow();
+	boxset.update();
 }
 
 void System::timeStepMove(double time_end, double strain_end)
@@ -1294,37 +1271,18 @@ void System::checkNewInteraction()
 	 */
 	vec3d pos_diff;
 	double sq_dist;
-	if (!ext_flow) {
-		for (int i=0; i<np-1; i++) {
-			for (auto j : boxset.neighborhood(i)) {
-				if (j > i) {
-					if (!hasNeighbor(i, j)) {
-						pos_diff = position[j]-position[i];
-						periodizeDiff(pos_diff);
-						sq_dist = pos_diff.sq_norm();
-						double scaled_interaction_range = (this->*calcInteractionRange)(i, j);
-						double sq_dist_lim = scaled_interaction_range*scaled_interaction_range;
-						if (sq_dist < sq_dist_lim) {
-							createNewInteraction(i, j, scaled_interaction_range);
-						}
-					}
-				}
-			}
-		}
-	} else {
-		vec3d pd_shift;
-		for (int i=0; i<np-1; i++) {
-			for (auto j : boxset.neighborhood(i)) {
-				if (j > i) {
-					if (!hasNeighbor(i, j)) {
-						pos_diff = position[j]-position[i];
-						periodizeDiffExtFlow(pos_diff, pd_shift, i, j);
-						sq_dist = pos_diff.sq_norm();
-						double scaled_interaction_range = (this->*calcInteractionRange)(i, j);
-						double sq_dist_lim = scaled_interaction_range*scaled_interaction_range;
-						if (sq_dist < sq_dist_lim) {
-							createNewInteraction(i, j, scaled_interaction_range);
-						}
+	auto PBC_lattice = pbc->getLattice();
+	for (int i=0; i<np-1; i++) {
+		for (auto j : boxset.neighborhood(i)) {
+			if (j > i) {
+				if (!hasNeighbor(i, j)) {
+					pos_diff = position[j]-position[i];
+					PBC_lattice.getNearestImageLargeSystem(pos_diff);
+					sq_dist = pos_diff.sq_norm();
+					double scaled_interaction_range = (this->*calcInteractionRange)(i, j);
+					double sq_dist_lim = scaled_interaction_range*scaled_interaction_range;
+					if (sq_dist < sq_dist_lim) {
+						createNewInteraction(i, j, scaled_interaction_range);
 					}
 				}
 			}
@@ -1920,7 +1878,7 @@ void System::computeShearRate()
 	Sym2Tensor rate_prop_stress;
 	Sym2Tensor rate_indep_stress;
 	gatherStressesByRateDependencies(rate_prop_stress, rate_indep_stress);
-	double newtonian_viscosity = doubledot(rate_prop_stress, getEinfty()); // computed with rate=1, o here it is also the viscosity.
+	double newtonian_viscosity = doubledot(rate_prop_stress, getEinfty()); // computed with rate=1, so here it is also the viscosity.
 	double newtonian_stress = target_stress - doubledot(rate_indep_stress, getEinfty());
 
 	set_shear_rate(newtonian_stress/newtonian_viscosity);
@@ -2291,152 +2249,24 @@ void System::rushWorkFor2DBrownian(vector<vec3d> &vel, vector<vec3d> &ang_vel)
 	}
 }
 
-void System::displacement(int i, const vec3d& dr)
+void System::displacement(int i, const vec3d &dr)
 {
-	position[i] += dr;
 	/* Note:
 	 * When the position of the particle is periodized,
 	 * we need to modify the velocity, which was already evaluated.
 	 * The position and velocity will be used to calculate the contact forces.
 	 */
-	if (!ext_flow) {
-		/**** simple shear flow ****/
-		int z_shift = periodize(position[i]);
-		if (z_shift != 0) {
-			velocity[i] += z_shift*vel_difference;
-		}
-	} else {
-		/**** extensional flow ****/
-		bool pd_transport = false;
-		periodizeExtFlow(i, pd_transport);
-		if (pd_transport) {
-			velocity[i] -= u_inf[i];
-			u_inf[i] = grad_u*position[i];
-			velocity[i] +=  u_inf[i];
-		}
+	auto PBC_lattice = pbc->getLattice();
+	bool crossing;
+	vec3d disp;
+	position[i] += dr;
+	std::tie(crossing, disp) = PBC_lattice.placeInPrimaryCell(position[i]);
+	if (crossing) {
+		vec3d velocity_shift = rate_tsor*disp;
+		u_inf[i] += velocity_shift;
+		velocity[i] += velocity_shift;
 	}
-	boxset.box(i);
-}
-
-void System::periodizeExtFlow(const int &i, bool &pd_transport)
-{
-	if (boxset.boxType(i) != 1) {
-		vec3d s = deform_backward*position[i];
-		//deform_backward.print();
-		while (s.z >= lz) {
-			s.z -= lz;
-			pd_transport = true;
-		}
-		while (s.z < 0) {
-			s.z += lz;
-			pd_transport = true;
-		}
-		while (s.x >= lx) {
-			s.x -= lx;
-			pd_transport = true;
-		}
-		while (s.x < 0) {
-			s.x += lx;
-			pd_transport = true;
-		}
-		position[i] = deform_forward*s;
-		//deform_forward.print();
-	}
-	if (!twodimension) {
-		if (position[i].y >= ly) {
-			position[i].y -= ly;
-		} else if (position[i].y < 0) {
-			position[i].y += ly;
-		}
-	}
-}
-
-// [0,l]
-int System::periodize(vec3d& pos)
-{
-	/* Lees-Edwards boundary condition
-	 *
-	 */
-	int z_shift = 0;
-	if (pos.z >= lz) {
-		pos.z -= lz;
-		pos -= shear_disp;
-		z_shift = -1;
-	} else if (pos.z < 0) {
-		pos.z += lz;
-		pos += shear_disp;
-		z_shift = 1;
-	}
-	while (pos.x >= lx) {
-		pos.x -= lx;
-	}
-	while (pos.x < 0) {
-		pos.x += lx;
-	}
-	if (!twodimension) {
-		if (pos.y >= ly) {
-			pos.y -= ly;
-		} else if (pos.y < 0) {
-			pos.y += ly;
-		}
-	}
-	return z_shift;
-}
-
-// [0,l]
-vec3d System::periodized(const vec3d &pos)
-{
-	vec3d periodized_pos = pos;
-	periodize(periodized_pos);
-	return periodized_pos;
-}
-
-int System::periodizeDiff(vec3d& pos_diff)
-{
-	/** Periodize a separation vector with Lees-Edwards boundary condition
-
-		On return pos_diff is the separation vector corresponding to the closest copies,
-		and velocity_offset contains the velocity difference produced by Lees-Edwards between the 2 points.
-	 */
-	int zshift = 0;
-	if (pos_diff.z > lz_half) {
-		pos_diff.z -= lz;
-		pos_diff -= shear_disp;
-		zshift = -1;
-	} else if (pos_diff.z < -lz_half) {
-		pos_diff.z += lz;
-		pos_diff += shear_disp;
-		zshift = 1;
-	}
-	while (pos_diff.x > lx_half) {
-		pos_diff.x -= lx;
-	}
-	while (pos_diff.x < -lx_half) {
-		pos_diff.x += lx;
-	}
-	if (!twodimension) {
-		if (pos_diff.y > ly_half) {
-			pos_diff.y -= ly;
-		} else if (pos_diff.y < -ly_half) {
-			pos_diff.y += ly;
-		}
-	}
-	return zshift;
-}
-
-void System::periodizeDiffExtFlow(vec3d& pos_diff, vec3d& pd_shift, const int &i, const int &j)
-{
-	pd_shift = boxset.periodicDiffShift(i, j);
-	if (twodimension == false) {
-		if (pos_diff.y > ly_half) {
-			pd_shift.y -= ly;
-		} else if (pos_diff.y < -ly_half) {
-			pd_shift.y += ly;
-		}
-	}
-	if (pd_shift.is_nonzero()) {
-		pos_diff += pd_shift;
-	}
+	boxset.box(i, position[i]);
 }
 
 void System::setSystemVolume()
@@ -2617,60 +2447,60 @@ void System::updateH(double extensional_strain)
 	box_diagonal_7_10 = box_axis2-box_axis1; // 7--10
 }
 
-void System::yaplotBoxing(std::ofstream &fout_boxing)
-{
-	boxset.yaplotBox(fout_boxing);
-	vec3d e1;
-	vec3d e2;
-	vec3d dy(0, 0, 0);
-	if (twodimension) {
-		dy.y = 0.01;
-	}
-	e1 = lx*deform_forward.getLine(0);
-	e2 = lz*deform_forward.getLine(2);
-	fout_boxing << "@ 0" << endl;
-	fout_boxing << "r 0.2\n";
-	fout_boxing << "s 0 -0.01 0 " << e1 -dy<< endl;
-	fout_boxing << "s 0 -0.01 0 " << e2 -dy << endl;
-	fout_boxing << "s " << e1 -dy << ' ' << e1+e2 -dy << endl;
-	fout_boxing << "s " << e2 -dy << ' ' << e1+e2 -dy << endl;
-	fout_boxing << "@ 0" << endl;
-
-	fout_boxing << "r 0.5\n";
-	for (int i=0; i<np; i++) {
-		//fout_boxing << "@ " << boxset.boxType(i) << endl;
-		fout_boxing << "c " << position[i]-2*dy << endl;
-	}
-	if (1) {
-		fout_boxing << "@ 2" << endl;
-		int i = 0;
-		fout_boxing << "r 1\n";
-		fout_boxing << "c " << position[i] << endl;
-		fout_boxing << "@ 4" << endl;
-		for (auto j : boxset.neighborhood(i)) {
-			if (i != j) {
-				fout_boxing << "c " << position[j] << endl;
-			}
-		}
-	}
-	fout_boxing << "y 5" << endl;
-	fout_boxing << "@ 5" << endl;
-	fout_boxing << "r 1\n";
-	for (auto op: overlap_particles) {
-		fout_boxing << "c " << position[op]-3*dy << endl;
-	}
-	overlap_particles.clear(); // @@@ for debuging
-
-	if (/* DISABLES CODE */ (0)) {
-		fout_boxing << "@ 8" << endl;
-		for (unsigned int k=0; k<interaction.size(); k++) {
-			int p0 = interaction[k].get_p0();
-			int p1 = interaction[k].get_p1();
-			vec3d nvec = interaction[k].nvec;
-			fout_boxing << "l " << position[p0]-3*dy << ' ' << position[p0]-3*dy + nvec  << endl;
-			fout_boxing << "l " << position[p1]-3*dy << ' ' << position[p1]-3*dy - nvec  << endl;
-		}
-	}
-
-	fout_boxing << endl;
-}
+// void System::yaplotBoxing(std::ofstream &fout_boxing)
+// {
+// 	boxset.yaplotBox(fout_boxing);
+// 	vec3d e1;
+// 	vec3d e2;
+// 	vec3d dy(0, 0, 0);
+// 	if (twodimension) {
+// 		dy.y = 0.01;
+// 	}
+// 	e1 = lx*deform_forward.getLine(0);
+// 	e2 = lz*deform_forward.getLine(2);
+// 	fout_boxing << "@ 0" << endl;
+// 	fout_boxing << "r 0.2\n";
+// 	fout_boxing << "s 0 -0.01 0 " << e1 -dy<< endl;
+// 	fout_boxing << "s 0 -0.01 0 " << e2 -dy << endl;
+// 	fout_boxing << "s " << e1 -dy << ' ' << e1+e2 -dy << endl;
+// 	fout_boxing << "s " << e2 -dy << ' ' << e1+e2 -dy << endl;
+// 	fout_boxing << "@ 0" << endl;
+//
+// 	fout_boxing << "r 0.5\n";
+// 	for (int i=0; i<np; i++) {
+// 		//fout_boxing << "@ " << boxset.boxType(i) << endl;
+// 		fout_boxing << "c " << position[i]-2*dy << endl;
+// 	}
+// 	if (1) {
+// 		fout_boxing << "@ 2" << endl;
+// 		int i = 0;
+// 		fout_boxing << "r 1\n";
+// 		fout_boxing << "c " << position[i] << endl;
+// 		fout_boxing << "@ 4" << endl;
+// 		for (auto j : boxset.neighborhood(i)) {
+// 			if (i != j) {
+// 				fout_boxing << "c " << position[j] << endl;
+// 			}
+// 		}
+// 	}
+// 	fout_boxing << "y 5" << endl;
+// 	fout_boxing << "@ 5" << endl;
+// 	fout_boxing << "r 1\n";
+// 	for (auto op: overlap_particles) {
+// 		fout_boxing << "c " << position[op]-3*dy << endl;
+// 	}
+// 	overlap_particles.clear(); // @@@ for debuging
+//
+// 	if (/* DISABLES CODE */ (0)) {
+// 		fout_boxing << "@ 8" << endl;
+// 		for (unsigned int k=0; k<interaction.size(); k++) {
+// 			int p0 = interaction[k].get_p0();
+// 			int p1 = interaction[k].get_p1();
+// 			vec3d nvec = interaction[k].nvec;
+// 			fout_boxing << "l " << position[p0]-3*dy << ' ' << position[p0]-3*dy + nvec  << endl;
+// 			fout_boxing << "l " << position[p1]-3*dy << ' ' << position[p1]-3*dy - nvec  << endl;
+// 		}
+// 	}
+//
+// 	fout_boxing << endl;
+// }

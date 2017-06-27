@@ -50,13 +50,13 @@ private:
 	std::array<std::size_t, 3> computeBoxNumber() const;
 	void setupBoxes();
 public:
-	BoxSet(double box_min_size,
-	       const PBC::RhomboidLattice &rhomb_,
-	       std::size_t np);
+	void init(double box_min_size,
+	          const PBC::RhomboidLattice &rhomb_,
+	          std::size_t np);
 	bool setPeriodicBoundaryConditions(const PBC::RhomboidLattice &rhomb_);
 
 	/*****
-	 box(int i)
+	 box(unsigned i, vec3d position_i)
 	 boxes particles i
 	 should be called after moving particle i
 	 *****/

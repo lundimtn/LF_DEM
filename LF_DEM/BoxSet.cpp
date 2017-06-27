@@ -1,12 +1,11 @@
 #include <stdexcept>
 #include <sstream>
 #include "BoxSet.h"
-#include "System.h"
 using namespace std;
 
-BoxSet::BoxSet(double box_min_size,
-               const PBC::RhomboidLattice &rhomb_,
-               std::size_t np)
+void BoxSet::init(double box_min_size,
+                  const PBC::RhomboidLattice &rhomb_,
+                  std::size_t np)
 {
 	string indent = "  BoxSet::\t";
 	cout << indent << "Setting up Cell List System ... ";

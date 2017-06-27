@@ -217,6 +217,8 @@ private:
 	std::vector<vec3d> rate_proportional_wall_force;
 	std::vector<vec3d> rate_proportional_wall_torque;
 
+	PBC::BoundaryCondition *pbc;
+
 	BoxSet boxset;
 	std::vector<double> radius;
 	std::vector<double> angle; // for 2D visualization
@@ -319,7 +321,7 @@ private:
 	double *ratio_unit_time; // to convert System time in Simulation time
 
 
-	
+
 	/****************************************************************************************************
 	 * Extensional flow using Kraynik-Reinelt Method was originally implemented                         *
 	 * by Antonio Martiniello and Giulio Giuseppe Giusteri from Auguest to November 2016 at OIST.       *
@@ -425,12 +427,12 @@ private:
 	{
 		return lx_ext_flow;
 	}
-	
+
 	double get_ly_ext_flow()
 	{
 		return ly_ext_flow;
 	}
-	
+
 	double get_lz_ext_flow()
 	{
 		return lz_ext_flow;
@@ -462,7 +464,7 @@ private:
 	{
 		return grad_u*pos_shift;
 	}
-	
+
 	void set_np(int val)
 	{
 		np = val;
@@ -514,13 +516,13 @@ private:
 	}
 
 	void setShearDirection(double theta_shear);
-	
+
 	void setImposedFlow(Sym2Tensor EhatInfty, vec3d OhatInfty);
-	
+
 	const std::vector <vec3d> & getNonAffineDisp()
 	{
 		return na_disp;
 	}
-	
+
 };
 #endif /* defined(__LF_DEM__System__) */
