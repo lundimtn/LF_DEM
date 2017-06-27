@@ -38,6 +38,7 @@ public:
 	void buildNeighborhoodContainer();
 
 	const std::vector <unsigned> & getNeighborhoodContainer() const {return neighborhood_container;}
+	const std::set <unsigned> & getContainer() const {return container;}
 };
 
 #endif /* defined(__LF_DEM__Box__) */

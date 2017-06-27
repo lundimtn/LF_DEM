@@ -22,15 +22,10 @@ void Box::remove(unsigned i)
 
 void Box::buildNeighborhoodContainer()
 {
-	if (type == 0) {
-		return;
-	}
 	neighborhood_container.clear();
 	size_t size = container.size();
 	for (const auto& box : neighbors) {
-		if (box->type != 0) {
-			size += box->getContainer().size();
-		}
+		size += box->getContainer().size();
 	}
 	neighborhood_container.resize(size);
 	int j = 0;
@@ -40,11 +35,9 @@ void Box::buildNeighborhoodContainer()
 		j++;
 	}
 	for (const auto& box : neighbors) {
-		if (box->type != 0) {
-			for (const int& k : box->container) {
-				neighborhood_container[j] = k;
-				j++;
-			}
+		for (const int& k : box->container) {
+			neighborhood_container[j] = k;
+			j++;
 		}
 	}
 }

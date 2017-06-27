@@ -22,13 +22,13 @@ public:
 	{
 		elm.resize(9, 0);
 	}
-	
+
 	matrix (double _e00, double _e01, double _e02,
 			double _e10, double _e11, double _e12,
 			double _e20, double _e21, double _e22)
 	{
 		elm.resize(9, 0);
-		
+
 		elm[0] = _e00;
 		elm[1] = _e01;
 		elm[2] = _e02;
@@ -39,12 +39,12 @@ public:
 		elm[7] = _e21;
 		elm[8] = _e22;
 	}
-	
-	inline double get(int i, int j)
+
+	inline double get(int i, int j) const
 	{
 		return elm[3*i+j];
 	}
-	
+
 	inline void set(int i, int j, double value)
 	{
 		// 0(0,0) 1(0,1) 2(0,2)
@@ -52,7 +52,7 @@ public:
 		// 6(2,0) 7(2,1) 8(2,2)
 		elm[3*i+j] = value;
 	}
-	
+
 	inline void setSymmetric(double e_00, double e_01, double e_02,
 							 double e_12, double e_11, double e_22)
 	{
@@ -66,14 +66,14 @@ public:
 		elm[5] = elm[7] = e_12;
 		elm[8] = e_22;
 	}
-	
+
 	inline void set_zero()
 	{
 		for (auto &elm_: elm) {
 			elm_ = 0;
 		}
 	}
-	
+
 	void set_rotation(double angle, char axis)
 	{
 		if (axis == 'x') {
@@ -92,17 +92,17 @@ public:
 			exit(1);
 		}
 	}
-	
-	matrix inverse()
+
+	matrix inverse() const
 	{
 		// 00 11 22   048
 		// 10 21 02   372
 		// 20 01 12   615
-		
+
 		// 00 21 12   075
 		// 20 11 02   742
 		// 10 01 22   318
-		
+
 		double determinant = elm[0]*elm[4]*elm[8] + elm[3]*elm[7]*elm[2] + elm[6]*elm[1]*elm[5] \
 		- elm[0]*elm[7]*elm[5] - elm[6]*elm[4]*elm[2] - elm[3]*elm[1]*elm[8];
 		matrix m_inv;
@@ -117,8 +117,8 @@ public:
 		m_inv.elm[8] = (elm[0]*elm[4]-elm[3]*elm[1])/determinant;
 		return m_inv;
 	}
-	
-	matrix antiSymmetrise()
+
+	matrix antiSymmetrise() const
 	{
 		matrix m_unsym;
 		for (int i=0;i<3;i++) {
@@ -129,28 +129,38 @@ public:
 		return m_unsym;
 	}
 
-	vec3d getLine(int i)
+	vec3d getLine(int i) const
 	{
 		// 0(0,0) 1(0,1) 2(0,2)
 		// 3(1,0) 4(1,1) 5(1,2)
 		// 6(2,0) 7(2,1) 8(2,2)
 		return vec3d(elm[3*i], elm[3*i+1], elm[3*i+2]);
 	}
-	
-	vec3d getColumn(int j)
+
+	vec3d getColumn(int j) const
 	{
 		// 0(0,0) 1(0,1) 2(0,2)
 		// 3(1,0) 4(1,1) 5(1,2)
 		// 6(2,0) 7(2,1) 8(2,2)
 		return vec3d(elm[j], elm[3+j], elm[6+j]);
 	}
-	
+
+	// assign operator
+	matrix& operator += (const matrix& m)
+	{
+		for (unsigned i=0; i<9; i++) {
+			elm[i] += m.elm[i];
+		}
+		return *this;
+	}
+
+
 	friend matrix operator * (const matrix& m,
 							  const double& a)
 	{
 		return a*m;
 	}
-	
+
 	/* multiplication */
 	friend matrix operator * (const double& a,
 							  const matrix& m)
@@ -159,25 +169,25 @@ public:
 					  a*m.elm[3], a*m.elm[4], a*m.elm[5],
 					  a*m.elm[6], a*m.elm[7], a*m.elm[8]);
 	}
-	
+
 	friend vec3d operator * (const matrix& m,
 							 const vec3d& v)
 	{
 		return vec3d(m.elm[0]*v.x+m.elm[1]*v.y+m.elm[2]*v.z,
 					 m.elm[3]*v.x+m.elm[4]*v.y+m.elm[5]*v.z,
 					 m.elm[6]*v.x+m.elm[7]*v.y+m.elm[8]*v.z);
-		
+
 	}
-	
+
 	friend vec3d operator * (const vec3d& v,
 							 const matrix& m)
 	{
 		return vec3d(m.elm[0]*v.x+m.elm[3]*v.y+m.elm[6]*v.z,
 					 m.elm[1]*v.x+m.elm[4]*v.y+m.elm[7]*v.z,
 					 m.elm[2]*v.x+m.elm[5]*v.y+m.elm[8]*v.z);
-		
+
 	}
-	
+
 	friend matrix operator * (const matrix& m1,
 							  const matrix& m2)
 	{
@@ -191,7 +201,7 @@ public:
 		}
 		return product;
 	}
-	
+
 	friend matrix operator + (const matrix& m1,
 							  const matrix& m2)
 	{
@@ -201,7 +211,7 @@ public:
 		}
 		return sum;
 	}
-	
+
 	friend matrix operator + (const double a,
 							  const matrix& m)
 	{
@@ -209,12 +219,21 @@ public:
 					  m.elm[3], a+m.elm[4], m.elm[5],
 					  m.elm[6], m.elm[7], a+m.elm[8]);
 	}
-	
+
 	void print()
 	{
 		std::cout << std::setw(10) << elm[0] << std::setw(10) << elm[1] << std::setw(10) <<  elm[2] << std::endl;
 		std::cout << std::setw(10) << elm[3] << std::setw(10) << elm[4] << std::setw(10) <<  elm[5] << std::endl;
 		std::cout << std::setw(10) << elm[6] << std::setw(10) << elm[7] << std::setw(10) <<  elm[8] << std::endl;
+	}
+
+	double norm() const
+	{
+		double N = 0;
+		for (auto x: elm) {
+			N += x*x;
+		}
+		return N;
 	}
 };
 
