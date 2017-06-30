@@ -108,20 +108,6 @@ public:
 		       + elm[5]*elm[5];
 	}
 
-	void setSymmetrize(matrix &m)
-	{
-		//Sym2Tensor m_sym;
-		// 0(0,0) 1(0,1) 2(0,2)
-		// 3(1,0) 4(1,1) 5(1,2)
-		// 6(2,0) 7(2,1) 8(2,2)
-		elm[0] = m.elm[0];
-		elm[1] = 0.5*(m.elm[1]+m.elm[3]);
-		elm[2] = 0.5*(m.elm[2]+m.elm[6]);
-		elm[3] = 0.5*(m.elm[5]+m.elm[7]);
-		elm[4] = m.elm[4];
-		elm[5] = m.elm[8];
-	}
-
 	matrix getMatrix()
 	{
 		matrix m(elm[0], elm[1], elm[2],
@@ -258,6 +244,15 @@ inline Sym2Tensor outer(const vec3d& v)
 	        v.y*v.z,
 	        v.y*v.y,
 	        v.z*v.z};
+}
+
+namespace Algebra
+{
+	inline Sym2Tensor symmetric(const matrix &M) {
+		return {M.elm[0], 0.5*(M.elm[1]+M.elm[3]), 0.5*(M.elm[2]+M.elm[6]),
+		                  M.elm[4],                0.5*(M.elm[5]+M.elm[7]),
+     	                                           M.elm[8]};
+	}
 }
 
 #endif

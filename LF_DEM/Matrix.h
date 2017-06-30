@@ -3,11 +3,11 @@
 //  LF_DEM
 //
 //  Created by Ryohei Seto on 2016/10/28.
-//  Copyright © 2016 Ryohei Seto. All rights reserved.
+//  Copyright © 2016 Ryohei Seto and Romain Mari. All rights reserved.
 //
 
-#ifndef Matrix_h
-#define Matrix_h
+#ifndef __LF_DEM__Rank2Tensor__
+#define __LF_DEM__Rank2Tensor__
 #include <vector>
 #include "vec3d.h"
 #include "Sym2Tensor.h"
@@ -237,4 +237,13 @@ public:
 	}
 };
 
-#endif /* Matrix_h */
+namespace Algebra
+{
+inline matrix transpose(const matrix &M) {
+	return {M.elm[0], M.elm[3], M.elm[6],
+	        M.elm[1], M.elm[4], M.elm[7],
+	        M.elm[2], M.elm[5], M.elm[8]};
+}
+}
+
+#endif /* __LF_DEM__Rank2Tensor__ */
