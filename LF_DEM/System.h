@@ -31,6 +31,7 @@
 #include "Interaction.h"
 #include "vec3d.h"
 #include "Matrix.h"
+#include "GradU.h"
 #include "BoxSet.h"
 #include "StokesSolver.h"
 #include "ParameterSet.h"
@@ -326,24 +327,10 @@ private:
 	 * Extensional flow using Kraynik-Reinelt Method was originally implemented                         *
 	 * by Antonio Martiniello and Giulio Giuseppe Giusteri from Auguest to November 2016 at OIST.       *
 	 ****************************************************************************************************/
-	matrix deform_forward; // Extension flow
-	matrix deform_backward; // Extension flow
+	// matrix deform_forward; // Extension flow
+	// matrix deform_backward; // Extension flow
 	//matrix dot_deform_forward; // Extension flow
 	matrix grad_u; // = L Extension flow
-	/*****************************
-	 * Domains in the simulation box are numbered as follows.
-	 *    10 - 8 --11
-	 *    |         |
-	 *    2    1    3
-	 *    |         |
-	 *    6 -- 4 ---7
-	 *************************/
-	vec3d box_axis1;  // x (6--7)
-	vec3d box_axis2;  // z (6--10)
-	vec3d box_diagonal_7_10; //
-	vec3d box_diagonal_6_11;
-	double strain_retrim; // APR
-	double strain_retrim_interval; // APR
 	std::vector <int> overlap_particles;
 	/****************************************/
 	void setVelocityDifference(); // Lees-Edwards boundary condition

@@ -111,9 +111,9 @@ protected:
 
 class LeesEdwards : public BoundaryCondition { // slanted boxes, not sliding boxes, gradient along z
 public:
-	void init(vec3d system_dimensions,
-	          vec3d shear_displacement,
-	          bool keep_init_strain);
+	LeesEdwards(vec3d system_dimensions,
+	            vec3d shear_displacement,
+	            bool keep_init_strain);
 	void applyStrain(const matrix &strain_tensor);
 	double getCumulatedStrain() const {return cumulated_strain_;};
 	matrix getStrain() const {return strain_;};
@@ -125,9 +125,9 @@ private:
 
 
 
-inline void LeesEdwards::init(vec3d system_dimensions,
-                              vec3d shear_displacement,
-                              bool keep_init_strain)
+inline LeesEdwards::LeesEdwards(vec3d system_dimensions,
+                                vec3d shear_displacement,
+                                bool keep_init_strain)
 {
 	L = system_dimensions;
 	assert(shear_displacement.z == 0);
@@ -169,10 +169,15 @@ inline void LeesEdwards::applyStrain(const matrix &strain_tensor)
 
 class KraynikReinelt : public BoundaryCondition {
 public:
-	void init(vec3d system_dimensions);
+	KraynikReinelt(vec3d system_dimensions);
 	void applyStrain(const matrix &strain_tensor);
 
 private:
+	static const double strain_retrim_interval = 2*log(0.5*(3+sqrt(5)));
+	double strain_retrim;
+	double sq_cos_ma = cos_ma*cos_ma;
+	double sq_sin_ma = sin_ma*sin_ma;
+	double cos_ma_sin_ma = cos_ma*sin_ma;
 };
 
 inline void KraynikReinelt::applyStrain(const matrix &strain_tensor)
@@ -180,9 +185,15 @@ inline void KraynikReinelt::applyStrain(const matrix &strain_tensor)
 	// TBD
 }
 
-inline void KraynikReinelt::init(vec3d system_dimensions)
+inline KraynikReinelt::KraynikReinelt(vec3d system_dimensions)
 {
-	// TBD
+	// extensional flow
+	strain_retrim = strain_retrim_interval; // Setting the first value of strain to retrim.
+	double cos_ma = cos(p.magic_angle);
+	double sin_ma = sin(p.magic_angle);
+	sq_cos_ma = cos_ma*cos_ma;
+	sq_sin_ma = sin_ma*sin_ma;
+	cos_ma_sin_ma = cos_ma*sin_ma;
 }
 
 
