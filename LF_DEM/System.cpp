@@ -579,14 +579,6 @@ void System::setupSystemPostConfiguration()
 		stokes_solver.init(np, np_mobile);
 	}
 	if (ext_flow) {
-		// extensional flow
-		strain_retrim_interval = 2*log(0.5*(3+sqrt(5))); // every this strain, the main simulation box is retrimmed.
-		strain_retrim = strain_retrim_interval; // Setting the first value of strain to retrim.
-		double cos_ma = cos(p.magic_angle);
-		double sin_ma = sin(p.magic_angle);
-		sq_cos_ma = cos_ma*cos_ma;
-		sq_sin_ma = sin_ma*sin_ma;
-		cos_ma_sin_ma = cos_ma*sin_ma;
 		//setH_dot(1);
 		updateH(0.5*cumulated_strain); // cumulated_strain = 0
 	}
@@ -2434,12 +2426,6 @@ void System::updateH(double extensional_strain)
 	//									dot_epsilon*(exp_strain_x*sq_sin_ma-exp_strain_z*sq_cos_ma)); //22
 	//
 	deform_backward = deform_forward.inverse();
-	/* grad_u is not neccesary to update.
-	 *
-	 */
-	//grad_u = dot_deform_forward*deform_backward;
-	//E_infinity = symmetrise(grad_u);
-	//O_infinity = grad_u.antiSymmetrise();
 	/************** for boxing **************************************/
 	box_axis1 = lx*deform_forward.getLine(0); // 6--7 = 10--11
 	box_axis2 = lz*deform_forward.getLine(2); // 6--10 = 7--11

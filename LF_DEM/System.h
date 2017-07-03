@@ -79,19 +79,12 @@ private:
 	double cumulated_strain;
 	double angle_wheel; // rotational angle of rotary couette geometory
 	double shear_rate; //@@@ In the extensional-flow simulation, shear_rate is extensional rate.
-	Sym2Tensor Ehat_infinity; // E/shear_rate: "shape" of the flow
-	vec3d omegahat_inf;  // omega/shear_rate: "shape" of the flow
-	Sym2Tensor E_infinity;
-	vec3d omega_inf;
+
 
 	double particle_volume;
 
 	std::vector <vec3d> u_inf;
 	std::vector <vec3d> na_disp;
-	double sq_cos_ma; // magic angle @@@@
-	double sq_sin_ma; // magic angle @@@@
-	double cos_ma_sin_ma; // magic angle @@@@
-	bool retrim_ext_flow;
 	/* data */
 	bool keepRunning(double time_end, double strain_end);
 	bool keepRunning(const std::string& time_or_strain, const double& value_end);
@@ -330,7 +323,7 @@ private:
 	// matrix deform_forward; // Extension flow
 	// matrix deform_backward; // Extension flow
 	//matrix dot_deform_forward; // Extension flow
-	matrix grad_u; // = L Extension flow
+	struct Algebra::GradU grad_u; // = L Extension flow
 	std::vector <int> overlap_particles;
 	/****************************************/
 	void setVelocityDifference(); // Lees-Edwards boundary condition
@@ -449,7 +442,7 @@ private:
 
 	vec3d get_vel_difference_extension(const vec3d &pos_shift)
 	{
-		return grad_u*pos_shift;
+		return grad_u.grad_u*pos_shift;
 	}
 
 	void set_np(int val)
@@ -499,7 +492,7 @@ private:
 
 	Sym2Tensor getEinfty()
 	{
-		return E_infinity;
+		return grad_u.E;
 	}
 
 	void setShearDirection(double theta_shear);

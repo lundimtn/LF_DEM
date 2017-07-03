@@ -253,6 +253,11 @@ namespace Algebra
 		                  M.elm[4],                0.5*(M.elm[5]+M.elm[7]),
      	                                           M.elm[8]};
 	}
+	inline double det(const Sym2Tensor &T) {
+		return T.elm[0]*(T.elm[4]*T.elm[5]-T.elm[3]*T.elm[3])
+				- T.elm[1]*(T.elm[1]*T.elm[5]-T.elm[3]*T.elm[2])
+				+ T.elm[2]*(T.elm[1]*T.elm[3]-T.elm[4]*T.elm[2]);
+	}
 }
 
 #endif
