@@ -1,6 +1,7 @@
 #ifndef __LF_DEM__LeesEdwards__
 #define __LF_DEM__LeesEdwards__
 #include <assert.h>
+#include <cmath>
 #include <numeric>
 #include <algorithm>
 #include "vec3d.h"
@@ -89,7 +90,7 @@ inline std::array<double, 3> RhomboidLattice::getNearestImageLargeSystem(vec3d& 
 	// Closest vector problem in rhomboid lattice.
 	// The method below does not always find the correct solutions for separations of order system size.
 	//
-	// Note 1: there is no simple exact algorithm
+	// Note 1: there is no "simple" exact algorithm, although one can do an extensive search limited to 8 lattice sites I believe.
 	// Note 2: if there is a boxing, this limitation is not a problem, as you ask for nearest images across the whole system.
 	std::array<double, 3> box_shifts;
 	for (auto u: ordering) {
@@ -166,34 +167,38 @@ inline void LeesEdwards::applyStrain(const matrix &strain_tensor)
 	box_rhomboid.setEdges(edges);
 }
 
+inline constexpr double lambda_p(unsigned k) {
+	return 0.5*(k+sqrt(pow(k,2)-3));
+}
 
+inline constexpr double magic_angle(double lambda_p, int n11, int n12) {
+	return atan((n11-lambda_p)/n12);
+}
+
+inline constexpr double epsilon_p(double lambda_p) {
+	return log(lambda_p);
+}
+
+template<unsigned k, int n11, int n12>
 class KraynikReinelt : public BoundaryCondition {
 public:
-	KraynikReinelt(vec3d system_dimensions);
+	KraynikReinelt(vec3d system_dimensions)
+		: strain_retrim(strain_retrim_interval) {};
 	void applyStrain(const matrix &strain_tensor);
 
 private:
-	static constexpr double strain_retrim_interval = 2*log(0.5*(3+sqrt(5)));
+	static constexpr auto ma = magic_angle(lambda_p(k), n11, n12);
+	static constexpr auto strain_retrim_interval = epsilon_p(lambda_p(k));
+	static constexpr auto sq_cos_ma = pow(cos(ma),2);
+	static constexpr auto sq_sin_ma = pow(sin(ma),2);
+	static constexpr auto cos_ma_sin_ma = cos(ma)*sin(ma);
 	double strain_retrim;
-	double sq_cos_ma;
-	double sq_sin_ma;
-	double cos_ma_sin_ma;
 };
 
-inline void KraynikReinelt::applyStrain(const matrix &strain_tensor)
+template<unsigned k, int n11, int n12>
+inline void KraynikReinelt<k, n11, n12>::applyStrain(const matrix &strain_tensor)
 {
 	// TBD
-}
-
-inline KraynikReinelt::KraynikReinelt(vec3d system_dimensions)
-{
-	// extensional flow
-	strain_retrim = strain_retrim_interval; // Setting the first value of strain to retrim.
-	double cos_ma = cos(p.magic_angle);
-	double sin_ma = sin(p.magic_angle);
-	sq_cos_ma = cos_ma*cos_ma;
-	sq_sin_ma = sin_ma*sin_ma;
-	cos_ma_sin_ma = cos_ma*sin_ma;
 }
 
 
