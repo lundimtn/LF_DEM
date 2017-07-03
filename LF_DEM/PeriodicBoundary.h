@@ -173,11 +173,11 @@ public:
 	void applyStrain(const matrix &strain_tensor);
 
 private:
-	static const double strain_retrim_interval = 2*log(0.5*(3+sqrt(5)));
+	static constexpr double strain_retrim_interval = 2*log(0.5*(3+sqrt(5)));
 	double strain_retrim;
-	double sq_cos_ma = cos_ma*cos_ma;
-	double sq_sin_ma = sin_ma*sin_ma;
-	double cos_ma_sin_ma = cos_ma*sin_ma;
+	double sq_cos_ma;
+	double sq_sin_ma;
+	double cos_ma_sin_ma;
 };
 
 inline void KraynikReinelt::applyStrain(const matrix &strain_tensor)
