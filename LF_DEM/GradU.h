@@ -20,8 +20,8 @@ struct GradU buildGradU(matrix grad_u_) {
 	gu.O = antisymmetric(grad_u_);
 	gu.E = symmetric(grad_u_);
 
-    // we define the shape of the flow as E and O normalized by the largest eigenvalue of E
-	auto evals = [](double det)->std::array<double,3>
+    // we define the shape of the flow as E and O normalized by the largest (in amplitude) eigenvalue of E.
+	auto evals = [](double det)->std::array<double,3> // eigenvalues of a 3-by-3 real symmetric traceless matrix
 					{auto theta = acos(0.5*det)/3.;
 					 return {2*cos(theta), 2*cos(theta+2*M_PI/3), 2*cos(theta+4*M_PI/3)};};
 	auto eigvals = evals(det(gu.E));
