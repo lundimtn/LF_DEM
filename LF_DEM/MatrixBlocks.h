@@ -1,6 +1,7 @@
 #ifndef __LF_DEM__MatrixBlocks__
 #define __LF_DEM__MatrixBlocks__
 #include <array>
+#include <iostream>
 
 struct ODBlock {
   /**
@@ -53,6 +54,54 @@ inline void resetODBlock(struct ODBlock &b)
 	b.col3.fill(0);
 	b.col4.fill(0);
 	b.col5.fill(0);
+}
+
+inline void printODBlock(const struct ODBlock& b)
+{
+	std::cout.precision(3);
+	std::cout << "OFF:" << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[0]
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '0'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[1]
+					 << std::setw(8) << b.col1[0]
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) << b.col3[0]
+					 << std::setw(8) <<  '0'
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[2]
+					 << std::setw(8) << b.col1[1]
+					 << std::setw(8) << b.col2[0]
+					 << std::setw(8) << b.col3[1]
+					 << std::setw(8) << b.col4[0]
+					 << std::setw(8) <<  '0'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << '0'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) << b.col3[2]
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[3]
+					 << std::setw(8) <<  '0'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) << b.col3[3]
+					 << std::setw(8) << b.col4[1]
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[4]
+					 << std::setw(8) << b.col1[2]
+					 << std::setw(8) <<  '0'
+					 << std::setw(8) << b.col3[4]
+					 << std::setw(8) << b.col4[2]
+					 << std::setw(8) << b.col5[0]
+					 << std::endl;
 }
 
 struct DBlock {
@@ -129,6 +178,54 @@ inline void resetDBlock(struct DBlock& b)
 	b.col3.fill(0);
 	b.col4.fill(0);
 	b.col5.fill(0);
+}
+
+inline void printDBlock(int idx, const struct DBlock& b)
+{
+	std::cout.precision(3);
+	std::cout << "P=" << idx << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[0]
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[1]
+					 << std::setw(8) << b.col1[0]
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << b.col2[2]
+					 << std::setw(8) << b.col1[1]
+					 << std::setw(8) << b.col2[0]
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << '0'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) << b.col3[0]
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[3]
+					 << std::setw(8) <<  '0'
+					 << std::setw(8) <<  '.'
+					 << std::setw(8) << b.col3[1]
+					 << std::setw(8) << b.col4[0]
+					 << std::setw(8) <<  '.'
+					 << std::endl;
+	std::cout << "| " << std::setw(8) << b.col0[4]
+					 << std::setw(8) << b.col1[2]
+					 << std::setw(8) <<  '0'
+					 << std::setw(8) << b.col3[2]
+					 << std::setw(8) << b.col4[1]
+					 << std::setw(8) << b.col5[0]
+					 << std::endl;
 }
 
 #endif

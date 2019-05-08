@@ -18,6 +18,8 @@
 #include "MersenneTwister.h"
 #endif
 
+#include <iostream>
+
 #ifdef SIGINT_CATCH
 extern volatile sig_atomic_t sig_caught;
 #endif
@@ -1541,6 +1543,8 @@ void System::buildResistanceMatrix()
 	 * The resistance matrix is reset with resistance_matrix_dblock,
 	 * which is calculated at the beginning.
 	 */
+	printDBlock(-1, resistance_matrix_dblock[0]);
+	printDBlock(-2, resistance_matrix_dblock[1]);
 	stokes_solver.resetResistanceMatrix(size_mm, size_mf, size_ff,
 										resistance_matrix_dblock, pairwise_resistance_changed);
 	pairwise_resistance_changed = false;
@@ -1550,6 +1554,9 @@ void System::buildResistanceMatrix()
 			int j = inter->partner(i);
 			if (j > i) {
 				if (inter->hasPairwiseResistance()) { // Range of interaction can be larger than range of lubrication
+					printDBlock(i, inter->RFU_DBlocks().first);
+					printDBlock(j, inter->RFU_DBlocks().second);
+					printODBlock(inter->RFU_ODBlock());
 					stokes_solver.addResistanceBlocks(i, j,
 													  inter->RFU_DBlocks(),
 													  inter->RFU_ODBlock());
@@ -1558,6 +1565,7 @@ void System::buildResistanceMatrix()
 		}
 	}
 	stokes_solver.matrixFillingDone();
+	stokes_solver.printResistanceMatrix(std::cout, "dense");
 }
 
 void System::computeForcesOnWallParticles()
