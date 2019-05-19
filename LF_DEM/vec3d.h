@@ -201,6 +201,11 @@ public:
 	{
 		std::cerr << x << ' '<< y << ' ' << z << std::endl;
 	}
+
+	double operator[](int i)
+	{
+		return i == 0 ? x : (i == 1 ? y : (i == 2 ? z : NAN));
+	}
 };
 
 /************ vec3d helping functions *******************/

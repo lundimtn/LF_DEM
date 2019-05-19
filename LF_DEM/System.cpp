@@ -102,12 +102,19 @@ eventLookUp(NULL)
 	ly = 0;
 	lz = 0;
 	shear_strain = 0;
+#ifdef RASPBERRY
+	//TODO: Hardcoded cluster of two particles
+	clusters.push_back(std::vector<int>{0,1});
+#endif
 }
 
 System::~System()
 {
 	interaction.clear();
 	interaction_list.clear();
+#ifdef RASPBERRY
+	clusters.clear();
+#endif
 }
 
 void System::allocateRessources()
@@ -1185,10 +1192,26 @@ void System::timeStepMove(double time_end, double strain_end)
 	/* evolve PBC */
 	timeStepBoxing();
 
+#ifdef RASPBERRY
+	//TODO: Calculate raspberry particle cluster
+	// 1) Form sigma
+	// 2) Compute cluster U_C
+	// 3) Move particles based on U_C
+
+	std::vector<vec3d> cluster_velocity;
+	calculateClusterVelocities(velocity, cluster_velocity);
+	//clusterDisplacement(cluster_velocity*dt);
+
 	/* move particles */
 	for (int i=0; i<np; i++) {
 		displacement(i, velocity[i]*dt);
 	}
+#else
+	/* move particles */
+	for (int i=0; i<np; i++) {
+		displacement(i, velocity[i]*dt);
+	}
+#endif
 	if (angle_output) {
 		for (int i=0; i<np; i++) {
 			angle[i] += ang_velocity[i].y*dt;
@@ -2971,3 +2994,30 @@ void System::countContactNumber()
 //{
 //	//		fout_history.open(filename);
 //}
+
+#ifdef RASPBERRY
+// calculate raspberry particles velocities
+void System::calculateClusterVelocities(std::vector<vec3d> &up, std::vector<vec3d> &uc)
+{
+	int cnum = clusters.size();
+	stokes_solver.allocateSigmaMatrix(np, cnum);
+	// generate sigma matrix from the curret particle positions
+	for (int cid=0; cid < cnum; cid++) { // cid - cluster id
+		vec3d cmass;
+		int csize = clusters[cid].size(); // cluster size
+
+		// calculate cluster center of mass
+		for (auto &pid: clusters[cid]) {
+			cmass += position[pid];
+		}
+		cmass /= (double)csize;
+
+		//
+		for (auto &pid: clusters[cid]) { // pid - particle id
+			stokes_solver.formSigmaMatrix(cid, pid, cmass, position[pid]);
+			stokes_solver.printSigmaMatrix(std::cout, "dense");
+		}
+	}
+	stokes_solver.calculateClusterVelocities(up, uc);
+}
+#endif // RASPBERRY

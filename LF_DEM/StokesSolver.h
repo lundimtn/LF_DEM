@@ -27,6 +27,9 @@ typedef int chol_int;
 #define CHOL_FUNC(NAME) cholmod_l_ ## NAME
 typedef long chol_int;
 #endif
+#ifdef RASPBERRY
+#include "cholmod_matrixops.h"
+#endif // RASPBERRY
 
 class StokesSolver{
 	/*
@@ -153,6 +156,11 @@ private:
 	std::vector<std::vector <chol_int> > odb_layout;
 	std::vector<std::vector <chol_int> > db_layout;
 	std::vector<chol_int> dblocks_cntnonzero;
+#ifdef RASPBERRY
+	std::vector<std::vector <chol_int> > sigma_layout;
+	cholmod_sparse* chol_res_matrix_sigma;
+#endif // RASPBERRY
+
 
 	void factorizeResistanceMatrix();
 	void allocateResistanceMatrix();
@@ -283,6 +291,13 @@ public:
 	// testing functions
 	void multiplyByResMat(double *vec);
 	void multiplySolutionByResMat(double *vec);
+
+#ifdef RASPBERRY
+	void allocateSigmaMatrix(int N, int M);
+	void formSigmaMatrix(int cid, int pid, vec3d &cluster, vec3d &particle);
+	void calculateClusterVelocities(std::vector<vec3d> &up, std::vector<vec3d> &uc);
+	void printSigmaMatrix(std::ostream&, std::string);
+#endif // RASPBERRY
 };
 
 #endif /* defined(__LF_DEM__StokesSolver__) */

@@ -12,9 +12,9 @@ ifneq ("$(wildcard $(makeconfig))","")
 endif
 
 # Compilation Flags
-CXXFLAGS_optimized = -O3
-CXXFLAGS_debug = -g -DDEV="1"
-CXXFLAGS_dev = -g -O3 -DDEV="1"
+CXXFLAGS_optimized = -O3 -DRASPBERRY
+CXXFLAGS_debug = -g -DDEV="1" -DRASPBERRY
+CXXFLAGS_dev = -g -O3 -DDEV="1" -DRASPBERRY
 
 GPP_Warnings = -Wall
 ifeq ($(CXX),$(filter $(CXX),g++ clang++ gcc))

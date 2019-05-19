@@ -545,5 +545,10 @@ private:
 			elm.reset();
 		}
 	}
+
+#ifdef RASPBERRY
+	std::vector<std::vector<int>> clusters;
+	void calculateClusterVelocities(std::vector<vec3d> &up, std::vector<vec3d> &uc);
+#endif // RASPBERRY
 };
 #endif /* defined(__LF_DEM__System__) */
