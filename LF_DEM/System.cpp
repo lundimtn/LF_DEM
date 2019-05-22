@@ -666,6 +666,9 @@ void System::setupSystemPostConfiguration()
 		omega_wheel_in  = omega_wheel*radius_out/radius_in;
 	}
 	if (pairwise_resistance) {
+#ifdef RASPBERRY
+		stokes_solver.setupClusters(clusters.size());
+#endif
 		stokes_solver.init(np, np_mobile);
 	}
 	dt = p.dt;
@@ -1198,8 +1201,10 @@ void System::timeStepMove(double time_end, double strain_end)
 	// 2) Compute cluster U_C
 	// 3) Move particles based on U_C
 
-	std::vector<vec3d> cluster_velocity;
-	calculateClusterVelocities(velocity, cluster_velocity);
+	std::vector<vec3d> cluster_velocity, cluster_ang_velocity;
+	cluster_velocity.resize(clusters.size());
+	cluster_ang_velocity.resize(clusters.size());
+	calculateClusterVelocities(cluster_velocity, cluster_ang_velocity);
 	//clusterDisplacement(cluster_velocity*dt);
 
 	/* move particles */
@@ -2997,7 +3002,7 @@ void System::countContactNumber()
 
 #ifdef RASPBERRY
 // calculate raspberry particles velocities
-void System::calculateClusterVelocities(std::vector<vec3d> &up, std::vector<vec3d> &uc)
+void System::calculateClusterVelocities(std::vector<vec3d> &uc, std::vector<vec3d> &wc)
 {
 	int cnum = clusters.size();
 	stokes_solver.allocateSigmaMatrix(np, cnum);
@@ -3018,6 +3023,6 @@ void System::calculateClusterVelocities(std::vector<vec3d> &up, std::vector<vec3
 			stokes_solver.printSigmaMatrix(std::cout, "dense");
 		}
 	}
-	stokes_solver.calculateClusterVelocities(up, uc);
+	stokes_solver.calculateClusterVelocities(uc, wc);
 }
 #endif // RASPBERRY

@@ -548,7 +548,7 @@ private:
 
 #ifdef RASPBERRY
 	std::vector<std::vector<int>> clusters;
-	void calculateClusterVelocities(std::vector<vec3d> &up, std::vector<vec3d> &uc);
+	void calculateClusterVelocities(std::vector<vec3d> &uc, std::vector<vec3d> &wc);
 #endif // RASPBERRY
 };
 #endif /* defined(__LF_DEM__System__) */

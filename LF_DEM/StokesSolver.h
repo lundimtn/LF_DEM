@@ -157,8 +157,11 @@ private:
 	std::vector<std::vector <chol_int> > db_layout;
 	std::vector<chol_int> dblocks_cntnonzero;
 #ifdef RASPBERRY
+	chol_int nc;
 	std::vector<std::vector <chol_int> > sigma_layout;
-	cholmod_sparse* chol_res_matrix_sigma;
+	cholmod_sparse* chol_sigma_matrix;
+	cholmod_dense* chol_rhs_c;
+	cholmod_dense* chol_vel_clusters;
 #endif // RASPBERRY
 
 
@@ -293,9 +296,10 @@ public:
 	void multiplySolutionByResMat(double *vec);
 
 #ifdef RASPBERRY
+	void setupClusters(int M);
 	void allocateSigmaMatrix(int N, int M);
 	void formSigmaMatrix(int cid, int pid, vec3d &cluster, vec3d &particle);
-	void calculateClusterVelocities(std::vector<vec3d> &up, std::vector<vec3d> &uc);
+	void calculateClusterVelocities(std::vector<vec3d> &uc, std::vector<vec3d> &wc);
 	void printSigmaMatrix(std::ostream&, std::string);
 #endif // RASPBERRY
 };

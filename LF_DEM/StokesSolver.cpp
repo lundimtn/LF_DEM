@@ -72,8 +72,11 @@ StokesSolver::~StokesSolver()
 		CHOL_FUNC(free_factor) (&chol_L, &chol_c);
 	}
 #ifdef RASPBERRY
-	if (chol_res_matrix_sigma) {
-		CHOL_FUNC(free_sparse) (&chol_res_matrix_sigma, &chol_c);
+	if (chol_sigma_matrix) {
+		CHOL_FUNC(free_sparse) (&chol_sigma_matrix, &chol_c);
+	}
+	if (chol_rhs_c) {
+		CHOL_FUNC(free_dense) (&chol_rhs_c, &chol_c);
 	}
 #endif // RASPBERRY
 
@@ -105,19 +108,25 @@ void StokesSolver::init(chol_int np_total, chol_int np_mobile)
 	db_layout[4] = {4,5};
 	db_layout[5] = {5};
 
-#ifdef RASPBERRY
-	sigma_layout.resize(3);
-	sigma_layout[0] = {1,2};
-	sigma_layout[1] = {0,2};
-	sigma_layout[2] = {0,1};
-#endif
-
-
 	dblocks_cntnonzero.resize(6);
 	for (unsigned i=0; i<6; i++) {
 		dblocks_cntnonzero[i] = (int)db_layout[i].size();
 	}
 }
+
+#ifdef RASPBERRY
+void StokesSolver::setupClusters(int M)
+{
+	// set number of clusters
+	nc = M;
+
+	// set sigma configuration
+	sigma_layout.resize(3);
+	sigma_layout[0] = {4,5};
+	sigma_layout[1] = {3,5};
+	sigma_layout[2] = {3,4};
+}
+#endif // RASPBERRY
 
 /************* Matrix filling methods **********************/
 
@@ -894,6 +903,11 @@ void StokesSolver::allocateRessources()
 	chol_force_mob = CHOL_FUNC(allocate_dense) (size_mm, 1, size_mm, CHOLMOD_REAL, &chol_c);
 	chol_force_fix = CHOL_FUNC(allocate_dense) (size_ff, 1, size_ff, CHOLMOD_REAL, &chol_c);
 	chol_Psolution = CHOL_FUNC(allocate_dense) (size_mm, 1, size_mm, CHOLMOD_REAL, &chol_c); // used for Brownian motion
+#ifdef RASPBERRY
+	auto size_c = 6*nc;
+	chol_rhs_c     = CHOL_FUNC(allocate_dense) (size_c, 1, size_c, CHOLMOD_REAL, &chol_c);
+#endif
+
 	for (decltype(size_mm) i=0; i<size_mm; i++) {
 		((double*)chol_rhs->x)[i] = 0;
 	}
@@ -1089,8 +1103,8 @@ void StokesSolver::allocateSigmaMatrix(int N, int M)
 	auto rows = 6*M;	// clusters
 	auto cols = 6*N;	// particles
 	auto nzmax = 12*N;	// non-zero elements per sigma element
-	if (!chol_res_matrix_sigma) {
-		chol_res_matrix_sigma = CHOL_FUNC(allocate_sparse) (rows, cols, nzmax, sorted, packed, stype, CHOLMOD_REAL, &chol_c);
+	if (!chol_sigma_matrix) {
+		chol_sigma_matrix = CHOL_FUNC(allocate_sparse) (rows, cols, nzmax, sorted, packed, stype, CHOLMOD_REAL, &chol_c);
 	}
 }
 
@@ -1103,57 +1117,52 @@ void StokesSolver::formSigmaMatrix(int cid, int pid, vec3d &cluster, vec3d &part
 {
 	// set column indices
 	auto top_row_nb = 6*cid;
+	auto first_col_nb = 6*pid;
+	auto first_in_block = 12*pid;
 	vector<chol_int> index_chol_ix(6);
-	index_chol_ix[0] = 12*pid;
-	((chol_int*)chol_res_matrix_sigma->p+6*pid)[0] = 12*pid;
+	index_chol_ix[0] = first_in_block;
+	((chol_int*)chol_sigma_matrix->p+first_col_nb)[0] = first_in_block;
 	for (size_t col=1; col<6; col++) {
-		index_chol_ix[col] = index_chol_ix[col-1]+(col < 4 ? 1 : 3);
-		((chol_int*)chol_res_matrix_sigma->p+6*pid)[col] = index_chol_ix[col];
+		index_chol_ix[col] = index_chol_ix[col-1]+(col > 3 ? 1 : 3);
+		((chol_int*)chol_sigma_matrix->p+first_col_nb)[col] = index_chol_ix[col];
 	}
-	// insertBlockColumnIndices((chol_int*)chol_res_matrix_sigma->p+6*pid, index_chol_ix);
+	// insertBlockColumnIndices((chol_int*)chol_sigma_matrix->p+first_col_nb, index_chol_ix);
 	// tell cholmod where the last column stops
 	// nb of non-zero elements in column col_nb-1 is 1 (it is the last element of the diagonal)
-	int nzero_nb_last_col = 3;
-	// so the last element in chol_res_matrix_sigma->p must be
-	((chol_int*)chol_res_matrix_sigma->p)[6*(pid+1)] = ((chol_int*)chol_res_matrix_sigma->p)[6*(pid+1)-1] + nzero_nb_last_col;
+	int nzero_nb_last_col = 1;
+	// so the last element in chol_sigma_matrix->p must be
+	((chol_int*)chol_sigma_matrix->p)[6*(pid+1)] = ((chol_int*)chol_sigma_matrix->p)[6*(pid+1)-1] + nzero_nb_last_col;
 
 	// set row indices for each column
-	auto matrix_i = (chol_int*)chol_res_matrix_sigma->i;
+	auto matrix_i = (chol_int*)chol_sigma_matrix->i;
 	for (size_t j=0; j<6; j++) {
 		auto index_start = index_chol_ix[j];
 		size_t i = 0;
-		if (j > 2)
+		matrix_i[index_start] = top_row_nb + j; // diagonal elements
+		if (j < 3)
 			for (i=0; i<2; i++) {
-				matrix_i[index_start+i] = top_row_nb + sigma_layout[j-3][i];
+				matrix_i[index_start+i+1] = top_row_nb + sigma_layout[j][i];
 			}
-		matrix_i[index_start+i] = top_row_nb + j; // diagonal elements
 	}
 
 	// auto status = chol_c.print;
 	// chol_c.print = 5;
-	// CHOL_FUNC(print_sparse) (chol_res_matrix_sigma, "sigma", &chol_c);
+	// CHOL_FUNC(print_sparse) (chol_sigma_matrix, "sigma", &chol_c);
 	// chol_c.print = status;
 
 	auto delta = particle - cluster;
-	auto matrix_x = (double*)chol_res_matrix_sigma->x;
+	auto matrix_x = (double*)chol_sigma_matrix->x;
 	int k = 0, l = 0, m = 4;
 	for (size_t j = 0; j<6; j++) {
-		auto erow = ((chol_int*)chol_res_matrix_sigma->p)[6*pid+j+1];
-		matrix_x[erow-1] = 1.0; // diagonal value
-		if (j > 2){
-			auto srow = ((chol_int*)chol_res_matrix_sigma->p)[6*pid+m];
-			matrix_x[srow+k] =  delta[j-3];
-			m--;
-			if (m < 3)
-				m = 5;
-			srow = ((chol_int*)chol_res_matrix_sigma->p)[6*pid+m];
-			matrix_x[srow+l] = -delta[j-3];
-			if (k == 0)
-				k++;
-			else if (l == 0)
-				l++;
-		}
+		auto srow = ((chol_int*)chol_sigma_matrix->p)[first_col_nb+j];
+		matrix_x[srow] = 1.0; // diagonal value
 	}
+	matrix_x[first_in_block+4] =  delta.z;
+	matrix_x[first_in_block+1] = -delta.z;
+	matrix_x[first_in_block+2] =  delta.y;
+	matrix_x[first_in_block+7] = -delta.y;
+	matrix_x[first_in_block+8] =  delta.x;
+	matrix_x[first_in_block+5] = -delta.x;
 }
 
 // testing
@@ -1161,16 +1170,16 @@ void StokesSolver::printSigmaMatrix(ostream& out, string sparse_or_dense)
 {
 	if (sparse_or_dense == "sparse") {
 		//		out << endl<< " chol res " << endl;
-		auto size = chol_res_matrix_sigma->nrow;
+		auto size = chol_sigma_matrix->nrow;
 		for (decltype(size) i = 0; i<size; i++) {
-			for (auto k =((chol_int*)chol_res_matrix_sigma->p)[i]; k<((chol_int*)chol_res_matrix_sigma->p)[i+1]; k++) {
-				out << i << " " << ((chol_int*)chol_res_matrix_sigma->i)[k] << " " << ((double*)chol_res_matrix_sigma->x)[k] << endl;
+			for (auto k =((chol_int*)chol_sigma_matrix->p)[i]; k<((chol_int*)chol_sigma_matrix->p)[i+1]; k++) {
+				out << i << " " << ((chol_int*)chol_sigma_matrix->i)[k] << " " << ((double*)chol_sigma_matrix->x)[k] << endl;
 			}
 		}
 	}
 	if (sparse_or_dense == "dense") {
-		cholmod_dense* dense_res = CHOL_FUNC(sparse_to_dense) (chol_res_matrix_sigma, &chol_c);
-		auto size = chol_res_matrix_sigma->nrow;
+		cholmod_dense* dense_res = CHOL_FUNC(sparse_to_dense) (chol_sigma_matrix, &chol_c);
+		auto size = chol_sigma_matrix->nrow;
 		for (decltype(size) i = 0; i<size; i++) {
 			// if(i==0){
 			// 	for (int j = 0; j < size/6; j++) {
@@ -1178,7 +1187,7 @@ void StokesSolver::printSigmaMatrix(ostream& out, string sparse_or_dense)
 			// 	}
 			// 	out << endl;
 			// }
-			for (decltype(size) j = 0; j<chol_res_matrix_sigma->ncol; j++) {
+			for (decltype(size) j = 0; j<chol_sigma_matrix->ncol; j++) {
 				out << setprecision(3) << ((double*)dense_res->x)[i+j*size] << "\t" ;
 			}
 			out << endl;
@@ -1191,7 +1200,57 @@ void StokesSolver::printSigmaMatrix(ostream& out, string sparse_or_dense)
 // Calculate cluster velocity
 // up - velocities of particles
 // uc - velocities of clusters
-void StokesSolver::calculateClusterVelocities(std::vector<vec3d> &up, std::vector<vec3d> &uc)
+// Solve for Uc: Σ*Rp*Σ' (Uc) = Σ*Fp
+// where Fp is chol_rhs, Rp is chol_res_matrix, Σ is chol_sigma_matrix
+void StokesSolver::calculateClusterVelocities(std::vector<vec3d> &uc, std::vector<vec3d> &wc)
 {
+	double one[] = {1, 0};
+	double zero[] = {0, 0};
+
+	auto status = chol_c.print;
+	chol_c.print = 5;
+
+	// RHS = Σ*Fp
+	CHOL_FUNC(sdmult) (chol_sigma_matrix, 0, one, zero, chol_rhs, chol_rhs_c, &chol_c);
+	CHOL_FUNC(print_dense) (chol_rhs_c, "Σ*Fp", &chol_c);
+
+	// LHS = Σ*Rp*Σ'
+
+	// Calculate Σ*Rp, see CHOLMOD_User p.138 - 21.6
+	int stype = 0;
+	CHOL_FUNC(print_sparse) (chol_sigma_matrix, "Σ", &chol_c);
+	CHOL_FUNC(print_sparse) (chol_res_matrix, "Rp", &chol_c);
+	auto chol_sig_res = CHOL_FUNC(ssmult) (chol_sigma_matrix, chol_res_matrix, stype, 1, 0, &chol_c);
+	CHOL_FUNC(print_sparse) (chol_sig_res, "Σ*Rp", &chol_c);
+	// Calculate Σ', CHOLMOD_User p.73 - 12.8
+	auto chol_sig_tr  = CHOL_FUNC(transpose) (chol_sigma_matrix, 1, &chol_c);
+	CHOL_FUNC(print_sparse) (chol_sig_tr, "Σ'", &chol_c);
+	// Calculate (Σ*Rp)*Σ'
+	auto chol_res_sig_matrix = CHOL_FUNC(ssmult) (chol_sig_res, chol_sig_tr, stype, 1, 1, &chol_c);
+	CHOL_FUNC(print_sparse) (chol_res_sig_matrix, "Σ*Rp*Σ'", &chol_c);
+
+	// see CHOLMOD_User p.114 - 19.1
+	auto chol_LC = CHOL_FUNC(analyze) (chol_res_sig_matrix, &chol_c);
+	// see CHOLMOD_User p.116 - 19.2
+	CHOL_FUNC(factorize) (chol_res_sig_matrix, chol_LC, &chol_c);
+	// see CHOLMOD_User p.119 - 19.7
+	CHOL_FUNC(solve2) (CHOLMOD_A,       // solve chol_res_sig_matrix*chol_vel_clusters = chol_rhs_c
+						chol_LC,                  // Cholesky factor
+						chol_rhs_c,               // RHS
+						NULL,                     // subpart of RHS, NULL means all
+						&chol_vel_clusters,       // solution stored here
+						NULL,                     // subpart of solution, NULL means all
+						&chol_solveY_workspace,   // reusable workspace
+						&chol_solveE_workspace,   // reusable workspace
+						&chol_c);
+	// see CHOLMOD_User p.83 - 13.2
+	CHOL_FUNC(free_factor) (&chol_LC, &chol_c);
+	// see CHOLMOD_User p.71 - 12.3
+	CHOL_FUNC(free_sparse) (&chol_res_sig_matrix, &chol_c);
+
+	// Convert to array of vectors
+	doubleToVec3d((double*)chol_vel_clusters->x, uc, wc);
+
+	chol_c.print = status;
 }
 #endif // RASPBERRY
