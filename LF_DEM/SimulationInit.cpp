@@ -476,6 +476,10 @@ void Simulation::openOutputFiles()
 	if (p.output.out_data_particle) {
 		outdata_par.setFile("par_"+simu_name+".dat",
 							data_header.str(), force_to_run, restart_from_chkp);
+#ifdef RASPBERRY
+		outdata_clus.setFile("clus_"+simu_name+".dat",
+							data_header.str(), force_to_run, restart_from_chkp);
+#endif // RASPBERRY
 	}
 	if (p.output.out_data_interaction) {
 		outdata_int.setFile("int_"+simu_name+".dat",

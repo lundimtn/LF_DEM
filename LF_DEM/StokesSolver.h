@@ -299,7 +299,9 @@ public:
 	void setupClusters(int M);
 	void allocateSigmaMatrix(int N, int M);
 	void formSigmaMatrix(int cid, int pid, vec3d &cluster, vec3d &particle);
-	void calculateClusterVelocities(std::vector<vec3d> &uc, std::vector<vec3d> &wc);
+	void calculateClusterVelocities(std::vector<vec3d> &uc, std::vector<vec3d> &wc,
+																	std::vector<vec3d> &fc, std::vector<vec3d> &tc);
+	void calculateParticleVelocities(std::vector<vec3d> &up, std::vector<vec3d> &wp);
 	void printSigmaMatrix(std::ostream&, std::string);
 #endif // RASPBERRY
 };

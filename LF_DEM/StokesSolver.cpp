@@ -1200,9 +1200,10 @@ void StokesSolver::printSigmaMatrix(ostream& out, string sparse_or_dense)
 // Calculate cluster velocity
 // up - velocities of particles
 // uc - velocities of clusters
-// Solve for Uc: Σ*Rp*Σ' (Uc) = Σ*Fp
+// Solve for Uc: Rc Uc = Fc => Σ*Rp*Σ' (Uc) = Σ*Fp
 // where Fp is chol_rhs, Rp is chol_res_matrix, Σ is chol_sigma_matrix
-void StokesSolver::calculateClusterVelocities(std::vector<vec3d> &uc, std::vector<vec3d> &wc)
+void StokesSolver::calculateClusterVelocities(std::vector<vec3d> &uc, std::vector<vec3d> &wc,
+																							std::vector<vec3d> &fc, std::vector<vec3d> &tc)
 {
 	double one[] = {1, 0};
 	double zero[] = {0, 0};
@@ -1210,24 +1211,26 @@ void StokesSolver::calculateClusterVelocities(std::vector<vec3d> &uc, std::vecto
 	auto status = chol_c.print;
 	chol_c.print = 5;
 
-	// RHS = Σ*Fp
+	// RHS = Σ*Fp = Fc
 	CHOL_FUNC(sdmult) (chol_sigma_matrix, 0, one, zero, chol_rhs, chol_rhs_c, &chol_c);
-	CHOL_FUNC(print_dense) (chol_rhs_c, "Σ*Fp", &chol_c);
+	// CHOL_FUNC(print_dense) (chol_rhs, "Fp", &chol_c);
+	// CHOL_FUNC(print_dense) (chol_rhs_c, "Σ*Fp", &chol_c);
+	doubleToVec3d((double*)chol_rhs_c->x, fc, tc);
 
-	// LHS = Σ*Rp*Σ'
+	// LHS = Σ*Rp*Σ' = Rc
 
 	// Calculate Σ*Rp, see CHOLMOD_User p.138 - 21.6
 	int stype = 0;
-	CHOL_FUNC(print_sparse) (chol_sigma_matrix, "Σ", &chol_c);
-	CHOL_FUNC(print_sparse) (chol_res_matrix, "Rp", &chol_c);
+	// CHOL_FUNC(print_sparse) (chol_sigma_matrix, "Σ", &chol_c);
+	// CHOL_FUNC(print_sparse) (chol_res_matrix, "Rp", &chol_c);
 	auto chol_sig_res = CHOL_FUNC(ssmult) (chol_sigma_matrix, chol_res_matrix, stype, 1, 0, &chol_c);
-	CHOL_FUNC(print_sparse) (chol_sig_res, "Σ*Rp", &chol_c);
+	// CHOL_FUNC(print_sparse) (chol_sig_res, "Σ*Rp", &chol_c);
 	// Calculate Σ', CHOLMOD_User p.73 - 12.8
 	auto chol_sig_tr  = CHOL_FUNC(transpose) (chol_sigma_matrix, 1, &chol_c);
-	CHOL_FUNC(print_sparse) (chol_sig_tr, "Σ'", &chol_c);
+	// CHOL_FUNC(print_sparse) (chol_sig_tr, "Σ'", &chol_c);
 	// Calculate (Σ*Rp)*Σ'
 	auto chol_res_sig_matrix = CHOL_FUNC(ssmult) (chol_sig_res, chol_sig_tr, stype, 1, 1, &chol_c);
-	CHOL_FUNC(print_sparse) (chol_res_sig_matrix, "Σ*Rp*Σ'", &chol_c);
+	// CHOL_FUNC(print_sparse) (chol_res_sig_matrix, "Σ*Rp*Σ'", &chol_c);
 
 	// see CHOLMOD_User p.114 - 19.1
 	auto chol_LC = CHOL_FUNC(analyze) (chol_res_sig_matrix, &chol_c);
@@ -1250,6 +1253,27 @@ void StokesSolver::calculateClusterVelocities(std::vector<vec3d> &uc, std::vecto
 
 	// Convert to array of vectors
 	doubleToVec3d((double*)chol_vel_clusters->x, uc, wc);
+
+	chol_c.print = status;
+}
+
+// Up = Σ' Uc
+// where
+// Up is chol_solution
+// Uc is chol_vel_clusters
+void StokesSolver::calculateParticleVelocities(std::vector<vec3d> &up, std::vector<vec3d> &wp)
+{
+	double one[] = {1, 0};
+	double zero[] = {0, 0};
+
+	auto status = chol_c.print;
+	chol_c.print = 5;
+
+	CHOL_FUNC(sdmult) (chol_sigma_matrix, 1, one, zero, chol_vel_clusters, chol_solution, &chol_c);
+	// CHOL_FUNC(print_dense) (chol_solution, "Σ'*Uc", &chol_c);
+
+	// Convert to array of vectors
+	doubleToVec3d((double*)chol_solution->x, up, wp);
 
 	chol_c.print = status;
 }

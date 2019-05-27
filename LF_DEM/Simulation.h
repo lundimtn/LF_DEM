@@ -76,6 +76,7 @@ private:
 	OutputData outdata_st;
 	OutputData outdata_pst;
 	OutputData outdata_par;
+	OutputData outdata_clus;
 	OutputData outdata_int;
 	std::ofstream fout_boxing;
 	gsd_handle gsdOut;
@@ -150,6 +151,7 @@ public:
 	void outputFinalConfiguration(const std::string&);
 	void outputIntFileTxt();
 	void outputParFileTxt();
+	void outputClustFileTxt();
 	void outputPstFileTxt();
 	void outputConfigurationBinary(std::string);
 	void outputGSD();

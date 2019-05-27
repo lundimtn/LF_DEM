@@ -965,6 +965,24 @@ void Simulation::outputParFileTxt()
 	outdata_par.writeToFile(snapshot_header.str());
 }
 
+void Simulation::outputClustFileTxt()
+{
+	int output_precision = diminish_output ? 4 : 6;
+	outdata_clus.setDefaultPrecision(output_precision);
+	outdata_clus.setUnits(system_of_units, output_unit);
+
+	for (int i=0; i<sys.clusters.size(); i++) {
+		outdata_clus.entryData("cluster index", Dimensional::Dimension::none, 1, i);
+		outdata_clus.entryData("force (x, y, z)", Dimensional::Dimension::Velocity, 3, sys.cluster_force[i]);
+		outdata_clus.entryData("torque (x, y, z)", Dimensional::Dimension::none, 3, sys.cluster_torque[i]);
+		outdata_clus.entryData("velocity (x, y, z)", Dimensional::Dimension::Velocity, 3, sys.cluster_velocity[i]);
+		outdata_clus.entryData("angular velocity (x, y, z)", Dimensional::Dimension::none, 3, sys.cluster_ang_velocity[i]);
+	}
+	stringstream snapshot_header;
+	getSnapshotHeader(snapshot_header);
+	outdata_clus.writeToFile(snapshot_header.str());
+}
+
 void Simulation::relativePositionView(std::vector<vec3d> &pos, std::vector<vec3d> &vel)
 {
 	int np = sys.get_np();
@@ -1101,6 +1119,9 @@ void Simulation::outputConfigurationData()
 {
 	if (sys.p.output.out_data_particle) {
 		outputParFileTxt();
+#ifdef RASPBERRY
+		outputClustFileTxt();
+#endif // RASPBERRY
 	}
 	if (sys.p.output.out_data_interaction) {
 		outputIntFileTxt();
